@@ -1,0 +1,24 @@
+# Hyperparameter sweep config template
+# Copy and rename for each sweep: sweep_NNNN.yaml
+
+sweep:
+  name: lr_sweep_NNNN
+  strategy: grid          # grid | random | bayesian
+  base_config: configs/base.yaml
+  metric:
+    name: val_loss
+    goal: minimize
+  budget:
+    max_trials: 20
+    max_gpu_hours: 24
+
+parameters:
+  training.learning_rate:
+    values: [1.0e-5, 3.0e-5, 1.0e-4, 3.0e-4, 1.0e-3]
+  training.batch_size:
+    values: [16, 32, 64]
+  # For random/bayesian sweeps, use ranges:
+  # training.learning_rate:
+  #   min: 1.0e-5
+  #   max: 1.0e-3
+  #   log_scale: true

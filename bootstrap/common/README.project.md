@@ -9,11 +9,13 @@ Brief description of what this project does and why it exists.
 ## Quick Start
 
 ```bash
-# Clone
 git clone https://github.com/{{OWNER}}/{{PROJECT_NAME}}.git
 cd {{PROJECT_NAME}}
 
-# Setup
+# Clone divan toolkit
+git clone https://github.com/{{OWNER}}/divan.git
+
+# Set up environment
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
@@ -24,19 +26,24 @@ scripts/check.sh
 
 ## Usage
 
-How to use this project after setup.
+How to run the main code.
+
+## Training / Experiments
+
+```bash
+# Run an experiment
+python src/train.py --config configs/experiment_0001.yaml
+
+# Deploy to GPU server
+# See divan/skills/custom/gpu-deploy/ for instructions
+```
 
 ## Development
 
 ```bash
-# Run tests
-scripts/test.sh
-
-# Lint
-scripts/lint.sh
-
-# Full check (lint + test)
-scripts/check.sh
+scripts/test.sh      # Run tests
+scripts/lint.sh      # Lint
+scripts/check.sh     # Both
 ```
 
 See `docs/commands.md` for the complete command reference.
@@ -45,10 +52,14 @@ See `docs/commands.md` for the complete command reference.
 
 ```
 {{PROJECT_NAME}}/
+  divan/             # Toolkit — skills, standards, workflows
   src/               # Source code
   tests/             # Tests
+  configs/           # Experiment configs
   docs/              # Documentation
-  scripts/           # Build/test/lint scripts
+  scripts/           # Build/test/lint/deploy scripts
+  data/              # Data (gitignored)
+  results/           # Results (gitignored)
 ```
 
 ## License

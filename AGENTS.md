@@ -1,65 +1,41 @@
-# AGENTS.md — Divan Template Repository
+# AGENTS.md — Divan Toolkit
 
-You are inside `divan`, a workspace template repository. This repo is NOT an
-application. It provides standards, scaffolding, and tooling to initialize
-sibling projects.
+You are inside `divan/`, a personal AI research toolkit. This directory lives
+inside a project and provides skills, standards, and workflows for ML/AI research.
+
+**Do not treat divan as the project itself.** The actual project is in the
+parent directory (`../`).
 
 ## Read First
 
-1. `docs/overview.md` — what this repo is
-2. `docs/workspace-model.md` — how divan relates to projects
-3. `docs/standards/agent-standards.md` — canonical rules (source of truth)
-4. `PROJECT_INIT_PLAYBOOK.md` — step-by-step initialization guide
+1. `docs/standards/agent-standards.md` — canonical rules
+2. `docs/overview.md` — what divan is
+3. `PROJECT_INIT_PLAYBOOK.md` — how to initialize the parent project
 
-## Your Primary Task
+## If You Are Initializing the Parent Project
 
-If you are here to initialize a project, follow `PROJECT_INIT_PLAYBOOK.md`.
-
-If you are here to modify the template itself, read `docs/standards/` first.
-
-## How to Initialize a Sibling Project
-
-### Option A: Run the script
+Follow `PROJECT_INIT_PLAYBOOK.md` or run:
 ```bash
-python tools/init_project.py --target ../project_name --profile research-python \
-  --project-name project_name --owner owner_name
+bash init.sh --profile ml-research
 ```
 
-### Option B: Follow the playbook
-Read `PROJECT_INIT_PLAYBOOK.md` and execute each step.
+## If You Are Working on the Parent Project
 
-## Safety Rules
+Go to the parent directory. Read `../AGENTS.md` or `../CLAUDE.md` there —
+those files will point you back to `divan/skills/` for task-specific guidance.
 
-- Never overwrite existing files without `--force` or explicit confirmation.
-- Never commit secrets (.env, credentials, keys).
-- Never push to remote unless explicitly asked.
-- Always dry-run before destructive operations.
-- Produce an initialization report after making changes.
+## Skills
+
+Skills are in `skills/custom/`. Each has a `SKILL.md` with:
+- When to use it
+- Required inputs
+- Step-by-step procedure
+- Expected output format
+- Safety notes
 
 ## Do Not
 
-- Do not treat this repo as an application.
-- Do not add domain-specific code here.
-- Do not modify bootstrap files without updating corresponding standards docs.
-- Do not remove placeholder syntax (`{{...}}`) from template files.
-
-## Standards Location
-
-All canonical standards live in `docs/standards/`:
-- `agent-standards.md` — agent behavior rules
-- `coding-standards.md` — code style and practices
-- `documentation-standards.md` — what docs are required
-- `research-workflow.md` — experiment and research conventions
-- `project-lifecycle.md` — how projects are created and maintained
-
-## After Making Changes
-
-Produce a report:
-```
-## Report
-- Action: [what you did]
-- Files created: [count]
-- Files modified: [count]
-- Files skipped: [count]
-- Warnings: [any issues]
-```
+- Do not add project code to divan
+- Do not modify skills without understanding their purpose
+- Do not run GPU jobs without confirming server and resources
+- Do not delete experiment logs

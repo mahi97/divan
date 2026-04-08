@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Initialize a sibling project from the divan template.
+"""Initialize the parent project from divan bootstrap files.
 
-Copies bootstrap/common files, applies a profile overlay, and renders
-placeholders. Supports dry-run, force, and backup modes.
+Divan lives INSIDE the target project at <project_root>/divan/.
+This script copies bootstrap/common/ and a profile overlay to <project_root>/../
+(i.e., the parent directory of divan).
 
-Usage:
-    python tools/init_project.py --target ../my_project --profile research-python \
-        --project-name my_project --owner myorg
+Usage from inside divan/:
+    python tools/init_project.py
+    python tools/init_project.py --profile ml-research --backup
+    python tools/init_project.py --dry-run
+    python tools/init_project.py --target /path/to/other/project
 
-Requires Python 3.8+ and only standard library modules.
+Requires Python 3.8+, stdlib only.
 """
 
 from __future__ import annotations
@@ -26,14 +29,15 @@ from pathlib import Path
 # Configuration
 # ---------------------------------------------------------------------------
 
-PROFILES = ["base", "research-python", "python-library", "llm-research"]
+PROFILES = ["base", "ml-research", "llm-research", "general-python"]
 
 PLACEHOLDER_RE = re.compile(r"\{\{[A-Z_]+\}\}")
 
 TEXT_EXTENSIONS = {
     ".md", ".txt", ".py", ".sh", ".ps1", ".toml", ".yaml", ".yml",
     ".json", ".cfg", ".ini", ".editorconfig", ".gitignore", ".gitattributes",
-    ".template", ".html", ".css", ".js", ".ts", ".rst",
+    ".template", ".html", ".css", ".js", ".ts", ".rst", ".tex", ".bib",
+    ".pbs",  # HPC PBS job scripts
 }
 
 TEXT_NAMES = {
@@ -46,6 +50,26 @@ PROFILE_SKIP = {"README.md"}
 
 
 # ---------------------------------------------------------------------------
+# Path resolution
+# ---------------------------------------------------------------------------
+
+def find_divan_root() -> Path:
+    """Find divan root — this script is in divan/tools/, so go up one."""
+    return Path(__file__).resolve().parent.parent
+
+
+def find_project_root(divan_root: Path, target: str | None) -> Path:
+    """Find the parent project root.
+
+    Default: the directory that contains divan/ (i.e., divan_root.parent).
+    If --target is given, use that path instead.
+    """
+    if target:
+        return Path(target).resolve()
+    return divan_root.parent
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -55,14 +79,25 @@ def is_text_file(path: Path) -> bool:
     return path.suffix.lower() in TEXT_EXTENSIONS
 
 
-def build_values(args: argparse.Namespace) -> dict[str, str]:
+def infer_project_name(project_root: Path) -> str:
+    return project_root.name
+
+
+def build_values(
+    project_name: str,
+    owner: str,
+    description: str,
+    python_version: str,
+    license_type: str,
+    language: str,
+) -> dict[str, str]:
     return {
-        "PROJECT_NAME": args.project_name,
-        "OWNER": args.owner,
-        "DESCRIPTION": args.description,
-        "PRIMARY_LANGUAGE": args.language,
-        "PYTHON_VERSION": args.python_version,
-        "LICENSE": args.license,
+        "PROJECT_NAME": project_name,
+        "OWNER": owner,
+        "DESCRIPTION": description,
+        "PRIMARY_LANGUAGE": language,
+        "PYTHON_VERSION": python_version,
+        "LICENSE": license_type,
         "YEAR": str(datetime.date.today().year),
     }
 
@@ -85,7 +120,7 @@ def collect_files(source_dir: Path) -> list[Path]:
 
 
 # ---------------------------------------------------------------------------
-# Core logic
+# Core
 # ---------------------------------------------------------------------------
 
 class InitResult:
@@ -105,14 +140,13 @@ class InitResult:
             f"- Files skipped (already exist): {len(self.skipped)}",
             f"- Files overwritten: {len(self.overwritten)}",
             f"- Files backed up: {len(self.backed_up)}",
-            f"- Placeholders: " + ", ".join(
-                f"{{{{{k}}}}} -> {v}" for k, v in sorted(values.items())
+            "- Placeholders: " + ", ".join(
+                f"{{{{{k}}}}}={v}" for k, v in sorted(values.items())
             ),
             f"- Errors: {len(self.errors) or 'none'}",
         ]
-        if self.errors:
-            for e in self.errors:
-                lines.append(f"  - {e}")
+        for e in self.errors:
+            lines.append(f"  - {e}")
         return "\n".join(lines)
 
 
@@ -126,29 +160,30 @@ def copy_file(
     backup: bool = False,
     dry_run: bool = False,
 ) -> None:
-    """Copy a single file, rendering placeholders if text."""
-
-    # Handle the special case where README.project.md -> README.md
+    # README.project.md → README.md
     if dst.name == "README.project.md":
         dst = dst.with_name("README.md")
-
-    # Handle .template extension (strip it)
+    # Strip .template extension
     if dst.suffix == ".template":
         dst = dst.with_suffix("")
 
-    rel = str(dst)
+    rel = str(dst.relative_to(dst.parents[len(dst.parts) - 2]) if False else dst)
+    try:
+        rel = str(dst)
+    except Exception:
+        rel = str(dst)
 
     if dst.exists():
         if not force:
-            result.skipped.append(rel)
+            result.skipped.append(str(dst))
             return
         if backup and not dry_run:
             bak = dst.with_suffix(dst.suffix + ".bak")
             shutil.copy2(dst, bak)
-            result.backed_up.append(rel)
-        result.overwritten.append(rel)
+            result.backed_up.append(str(dst))
+        result.overwritten.append(str(dst))
     else:
-        result.created.append(rel)
+        result.created.append(str(dst))
 
     if dry_run:
         return
@@ -161,19 +196,18 @@ def copy_file(
             rendered = render_string(content, values)
             dst.write_text(rendered, encoding="utf-8")
         except (UnicodeDecodeError, OSError) as e:
-            result.errors.append(f"{rel}: {e}")
+            result.errors.append(f"{dst}: {e}")
             shutil.copy2(src, dst)
     else:
         shutil.copy2(src, dst)
 
-    # Preserve executable bit
     if os.access(src, os.X_OK):
         os.chmod(dst, dst.stat().st_mode | 0o111)
 
 
 def init_project(
-    template_root: Path,
-    target: Path,
+    divan_root: Path,
+    project_root: Path,
     profile: str,
     values: dict[str, str],
     *,
@@ -183,32 +217,31 @@ def init_project(
 ) -> InitResult:
     result = InitResult()
 
-    # Create target directory
     if not dry_run:
-        target.mkdir(parents=True, exist_ok=True)
+        project_root.mkdir(parents=True, exist_ok=True)
 
-    # Copy common files
-    common_dir = template_root / "bootstrap" / "common"
+    # Common files
+    common_dir = divan_root / "bootstrap" / "common"
     if not common_dir.is_dir():
-        result.errors.append(f"Common directory not found: {common_dir}")
+        result.errors.append(f"bootstrap/common/ not found: {common_dir}")
         return result
 
     for rel_path in collect_files(common_dir):
         src = common_dir / rel_path
-        dst = target / rel_path
+        dst = project_root / rel_path
         copy_file(src, dst, values, result, force=force, backup=backup, dry_run=dry_run)
 
-    # Copy profile overlay (skip for 'base' which is common-only)
+    # Profile overlay
     if profile != "base":
-        profile_dir = template_root / "bootstrap" / "profiles" / profile
+        profile_dir = divan_root / "bootstrap" / "profiles" / profile
         if not profile_dir.is_dir():
-            result.errors.append(f"Profile directory not found: {profile_dir}")
+            result.errors.append(f"Profile not found: {profile_dir}")
         else:
             for rel_path in collect_files(profile_dir):
                 if rel_path.name in PROFILE_SKIP:
                     continue
                 src = profile_dir / rel_path
-                dst = target / rel_path
+                dst = project_root / rel_path
                 copy_file(src, dst, values, result, force=force, backup=backup, dry_run=dry_run)
 
     return result
@@ -218,41 +251,40 @@ def init_project(
 # CLI
 # ---------------------------------------------------------------------------
 
-def find_template_root() -> Path:
-    """Find the divan template root by looking relative to this script."""
-    return Path(__file__).resolve().parent.parent
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Initialize a project from the divan template.",
+        description="Initialize parent project from divan bootstrap files.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
+Run from inside divan/ or from the parent project root.
+
 Examples:
-  %(prog)s --target ../my_project --profile research-python --project-name my_project --owner acme
-  %(prog)s --target ../legacy --profile base --project-name legacy --owner acme --backup
-  %(prog)s --target ../experiment --profile llm-research --project-name experiment --owner acme --dry-run
+  python tools/init_project.py
+  python tools/init_project.py --profile ml-research
+  python tools/init_project.py --dry-run
+  python tools/init_project.py --backup --force
+  python tools/init_project.py --target /path/to/other/project
         """,
     )
     parser.add_argument(
-        "--target", required=True,
-        help="Path to the target project directory",
+        "--target", default=None,
+        help="Target project root (default: parent of divan/, i.e. ../)",
     )
     parser.add_argument(
-        "--profile", default="base", choices=PROFILES,
-        help="Profile to apply (default: base)",
+        "--profile", default="ml-research", choices=PROFILES,
+        help="Profile to apply (default: ml-research)",
     )
     parser.add_argument(
-        "--project-name", required=True,
-        help="Project name (used for {{PROJECT_NAME}} placeholder)",
+        "--project-name", default=None,
+        help="Project name — inferred from target directory name if omitted",
     )
     parser.add_argument(
-        "--owner", required=True,
-        help="Owner name (used for {{OWNER}} placeholder)",
+        "--owner", default="{{OWNER}}",
+        help="Owner/username placeholder value",
     )
     parser.add_argument(
-        "--description", default="A new project",
-        help="Project description (default: 'A new project')",
+        "--description", default="An ML research project",
+        help="Project description",
     )
     parser.add_argument(
         "--language", default="Python",
@@ -268,7 +300,7 @@ Examples:
     )
     parser.add_argument(
         "--dry-run", action="store_true",
-        help="Show what would be done without making changes",
+        help="Show what would happen without making changes",
     )
     parser.add_argument(
         "--force", action="store_true",
@@ -276,24 +308,34 @@ Examples:
     )
     parser.add_argument(
         "--backup", action="store_true",
-        help="Create .bak copies before overwriting (requires --force)",
+        help="Create .bak copies before overwriting (with --force)",
     )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    template_root = find_template_root()
-    target = Path(args.target).resolve()
-    values = build_values(args)
+    divan_root = find_divan_root()
+    project_root = find_project_root(divan_root, args.target)
+
+    project_name = args.project_name or infer_project_name(project_root)
+    values = build_values(
+        project_name=project_name,
+        owner=args.owner,
+        description=args.description,
+        python_version=args.python_version,
+        license_type=args.license,
+        language=args.language,
+    )
 
     if args.dry_run:
-        print(f"[DRY RUN] Would initialize {target} with profile '{args.profile}'")
+        print(f"[DRY RUN] Would initialize {project_root} with profile '{args.profile}'")
+        print(f"  divan root: {divan_root}")
         print()
 
     result = init_project(
-        template_root=template_root,
-        target=target,
+        divan_root=divan_root,
+        project_root=project_root,
         profile=args.profile,
         values=values,
         force=args.force,
@@ -301,21 +343,28 @@ def main(argv: list[str] | None = None) -> int:
         dry_run=args.dry_run,
     )
 
-    print(result.summary(target, args.profile, values))
+    print(result.summary(project_root, args.profile, values))
 
-    if args.dry_run:
+    if args.dry_run and (result.created or result.skipped or result.overwritten):
         print()
-        print("Files that would be created:")
+        print("Would create:")
         for f in result.created:
-            print(f"  + {f}")
+            # Show path relative to project_root for readability
+            try:
+                rel = Path(f).relative_to(project_root)
+            except ValueError:
+                rel = Path(f)
+            print(f"  + {rel}")
         if result.skipped:
-            print("Files that would be skipped:")
-            for f in result.skipped:
-                print(f"  ~ {f}")
-        if result.overwritten:
-            print("Files that would be overwritten:")
-            for f in result.overwritten:
-                print(f"  ! {f}")
+            print("Would skip (exist):")
+            for f in result.skipped[:10]:
+                try:
+                    rel = Path(f).relative_to(project_root)
+                except ValueError:
+                    rel = Path(f)
+                print(f"  ~ {rel}")
+            if len(result.skipped) > 10:
+                print(f"  ... and {len(result.skipped) - 10} more")
 
     if result.errors:
         return 1

@@ -45,6 +45,14 @@ credentials.json
 # Logs
 *.log
 
-# Data (uncomment if using large local data)
-# data/
-# results/
+# Divan toolkit (remove this line if using git submodules)
+divan/
+
+# Data and results (large files)
+data/
+results/
+models/
+checkpoints/
+
+# Weights & Biases
+wandb/

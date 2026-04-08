@@ -1,120 +1,136 @@
 # Example: Workspace Layout
 
-This shows how a typical divan workspace looks on disk.
+Divan lives **inside** each project as `project/divan/`.
 
-## Fresh Workspace
+---
 
-```
+## Single Project
+
+```text
 ~/research/
-  divan/                          ← template repo (cloned once)
-    README.md
-    AGENTS.md
-    CLAUDE.md
-    TEMPLATE_USAGE.md
-    PROJECT_INIT_PLAYBOOK.md
-    docs/
-      standards/                  ← canonical rules
-      templates/                  ← document templates
-    bootstrap/
-      common/                     ← files for every project
-      profiles/                   ← project-type overlays
-    tools/
-      init_project.py             ← initializer
-      validate_template.py        ← self-checker
-```
-
-## After Initializing Two Projects
-
-```
-~/research/
-  divan/                          ← template repo (unchanged)
-
-  image_classifier/               ← initialized with research-python
-    README.md
-    AGENTS.md
-    CLAUDE.md
-    pyproject.toml
+  attention_paper/             ← your ML research project (git repo)
+    divan/                     ← cloned inside (your toolkit)
+      skills/custom/           ← GPU deploy, experiments, paper, etc.
+      docs/servers/            ← your server configs
+      bootstrap/               ← files copied to parent on init
+      tools/init_project.py
     src/
-      __init__.py
+      train.py
+      model.py
+      data.py
     tests/
-      test_smoke.py
+    configs/
+      base.yaml
+      experiment_0001.yaml
     docs/
       architecture.md
-      commands.md
-      roadmap.md
       experiments/
-      literature/
-      decisions/
+        0001-baseline.md
     scripts/
       check.sh
-      test.sh
-      lint.sh
-    .claude/
-    .agents/
-
-  prompt_eval/                    ← initialized with llm-research
-    README.md
-    AGENTS.md
-    CLAUDE.md
-    docs/
-      architecture.md
-      commands.md
-      experiments/
-      literature/
-    scripts/
-      check.sh
-      test.sh
-      lint.sh
-    .claude/
-    .agents/
+      jobs/
+        train.pbs
+    paper/
+      main.tex
+    AGENTS.md                  ← created by init, points to divan/
+    CLAUDE.md                  ← created by init
+    .gitignore                 ← created by init (includes divan/)
+    pyproject.toml
 ```
 
-## Retrofitted Legacy Project
+## Multiple Projects
 
-```
+```text
 ~/research/
-  divan/
+  attention_paper/
+    divan/           ← clone of your divan
+    src/
+    ...
 
-  old_scraper/                    ← existing project, retrofitted with base
-    scraper.py                    ← existing code (untouched)
-    utils.py                      ← existing code (untouched)
-    requirements.txt              ← existing file (untouched)
-    README.md                     ← ADDED by divan
-    AGENTS.md                     ← ADDED
-    CLAUDE.md                     ← ADDED
-    docs/
-      architecture.md             ← ADDED
-      commands.md                 ← ADDED
-    scripts/
-      check.sh                    ← ADDED
-      test.sh                     ← ADDED
-      lint.sh                     ← ADDED
-    .claude/                      ← ADDED
-    .agents/                      ← ADDED
+  scaling_laws/
+    divan/           ← same divan repo, independent clone
+    src/
+    ...
+
+  benchmark_suite/
+    divan/           ← same divan repo, independent clone
+    src/
+    ...
 ```
 
-## Commands Used
+Each project gets its own divan clone. Update all at once:
 
 ```bash
-# Initialize image_classifier
-python divan/tools/init_project.py \
-  --target image_classifier \
-  --profile research-python \
-  --project-name image_classifier \
-  --owner mylab
+for dir in ~/research/*/divan; do
+  echo "Updating $dir..."
+  (cd "$dir" && git pull)
+done
+```
 
-# Initialize prompt_eval
-python divan/tools/init_project.py \
-  --target prompt_eval \
-  --profile llm-research \
-  --project-name prompt_eval \
-  --owner mylab
+## Initialization Commands
 
-# Retrofit old_scraper
-python divan/tools/init_project.py \
-  --target old_scraper \
-  --profile base \
-  --project-name old_scraper \
-  --owner mylab \
-  --backup
+```bash
+# New ML research project
+mkdir ~/research/my_experiment && cd ~/research/my_experiment
+git init
+git clone https://github.com/YOUR_USER/divan.git
+cd divan && bash init.sh --profile ml-research
+
+# Existing project (safe — skips existing files)
+cd ~/research/existing_project
+git clone https://github.com/YOUR_USER/divan.git
+cd divan && bash init.sh --profile base --backup
+
+# LLM research project
+mkdir ~/research/llm_eval && cd ~/research/llm_eval
+git init
+git clone https://github.com/YOUR_USER/divan.git
+cd divan && bash init.sh --profile llm-research
+```
+
+## What Gets Created in the Parent Project
+
+After `bash init.sh --profile ml-research`:
+
+```text
+my_project/
+  README.md          ← from bootstrap (placeholder-rendered)
+  AGENTS.md          ← from bootstrap
+  CLAUDE.md          ← from bootstrap
+  .gitignore         ← from bootstrap (includes divan/)
+  .editorconfig
+  .gitattributes
+  pyproject.toml     ← from ml-research profile
+  src/
+    __init__.py
+    train.py
+    evaluate.py
+    utils/config.py
+  tests/
+    test_smoke.py
+  configs/
+    base.yaml
+    sweeps/
+      template.yaml
+  docs/
+    architecture.md
+    commands.md
+    roadmap.md
+    decisions/README.md
+    experiments/README.md
+    literature/README.md
+  scripts/
+    check.sh / check.ps1
+    test.sh  / test.ps1
+    lint.sh  / lint.ps1
+    jobs/
+      train.pbs
+  paper/
+    main.tex
+    references.bib
+  .claude/
+    settings.json
+    skills/...
+  .agents/skills/...
+  .codex/config.toml
 ```

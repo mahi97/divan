@@ -1,19 +1,13 @@
 # Profile: base
 
-The base profile applies only the common bootstrap files. No extra files are
-added.
+Applies only the common bootstrap files. No extra overlay.
 
 ## When to Use
 
-- General-purpose projects
-- Projects where you're unsure which profile fits
-- As a starting point before adding profile-specific files later
+- General projects where no specific profile fits
+- When you want minimal scaffolding and will customize manually
+- Starting point before deciding on a more specific profile
 
 ## Files Added
 
 Only `bootstrap/common/` files. No overlay.
-
-## After Initialization
-
-You can always add profile-specific files later by running the initializer
-again with a different `--profile` and `--force` flag.

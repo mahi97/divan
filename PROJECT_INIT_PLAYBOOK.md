@@ -1,110 +1,107 @@
 # Project Initialization Playbook
 
-This is a step-by-step guide for AI agents. Follow it exactly.
+Step-by-step guide for AI agents. Follow exactly.
 
 ---
 
-## Prerequisites
+## Context
 
-- You are working inside a target project directory (e.g., `../project_1`).
-- The divan template repo is a sibling (e.g., `../divan`).
-- You know the project name, owner, and desired profile.
+You are inside `divan/` which is a subdirectory of the target project.
+The parent directory (`../`) is the project you are initializing.
 
-## Step 1: Locate Divan
+## Step 1: Confirm Location
 
 ```bash
-ls ../divan/PROJECT_INIT_PLAYBOOK.md
+ls ../  # Should be the project root
+ls ./bootstrap/common/  # Should exist (you're in divan/)
 ```
 
-If this file does not exist, ask the operator where the template repo is.
+If not in divan/, navigate there first.
 
-## Step 2: Read Standards
+## Step 2: Determine Mode
 
-Read these files (in order):
-1. `../divan/docs/standards/agent-standards.md`
-2. `../divan/docs/standards/documentation-standards.md`
+- **New project** (parent is empty or nearly empty): proceed normally.
+- **Existing project** (parent has code): use RETROFIT rules — do not
+  overwrite existing files.
 
-## Step 3: Choose Mode
+## Step 3: Choose Profile
 
-- **New project (empty directory):** proceed to Step 4.
-- **Existing project (has code):** proceed to Step 4 but use RETROFIT rules in
-  Step 5.
+| Profile          | When to use                              |
+|------------------|------------------------------------------|
+| `base`           | General project, unknown type            |
+| `ml-research`    | ML experiments, training, benchmarks     |
+| `llm-research`   | LLM work — prompts, evals, models       |
+| `general-python` | Python package or application            |
 
-## Step 4: Choose Profile
+Default: `ml-research`
 
-| Profile            | When to use                              |
-|--------------------|------------------------------------------|
-| `base`             | General project, unknown type            |
-| `research-python`  | Experiments, papers, benchmarks          |
-| `python-library`   | Reusable pip-installable package         |
-| `llm-research`     | LLM/ML work with models and GPUs        |
+## Step 4: Run Init
 
-If unsure, use `base`.
+### Option A: Script
+```bash
+bash init.sh --profile ml-research
+```
 
-## Step 5: Copy Files
+### Option B: Manual
 
-### 5a: Common files
+Copy all files from `bootstrap/common/` to `../`, preserving structure:
+```bash
+cp -rn bootstrap/common/. ../
+```
 
-Copy all files from `../divan/bootstrap/common/` into the project root,
-preserving directory structure.
+Then copy profile overlay (skip profile's README.md):
+```bash
+# For ml-research:
+cp -rn bootstrap/profiles/ml-research/. ../
+```
 
-**RETROFIT RULE:** If a file already exists in the target, DO NOT overwrite it.
-Skip it and record it in your report.
+**RETROFIT RULE:** If a file already exists in `../`, DO NOT overwrite.
+Skip it and note it in your report.
 
-### 5b: Profile overlay
+## Step 5: Replace Placeholders
 
-Copy files from `../divan/bootstrap/profiles/<chosen-profile>/` into the
-project root, preserving directory structure. Skip `README.md` in the profile
-directory (it documents the profile, not the project).
+In every file copied to `../`, replace:
 
-**RETROFIT RULE:** Same as 5a — do not overwrite existing files.
+| Placeholder            | Value                              |
+|------------------------|------------------------------------|
+| `{{PROJECT_NAME}}`     | Parent directory name              |
+| `{{OWNER}}`            | GitHub username (ask if unknown)   |
+| `{{DESCRIPTION}}`      | One-line description (ask or infer)|
+| `{{PRIMARY_LANGUAGE}}` | Python (default)                   |
+| `{{PYTHON_VERSION}}`   | 3.12 (default, check .python-version) |
+| `{{LICENSE}}`          | MIT (default)                      |
+| `{{YEAR}}`             | Current year                       |
 
-## Step 6: Replace Placeholders
+## Step 6: Verify
 
-In every file you copied, replace:
+- [ ] No `{{…}}` placeholders remain in `../`
+- [ ] `../README.md` exists with real content
+- [ ] `../AGENTS.md` exists and references `divan/`
+- [ ] `../CLAUDE.md` exists and references `divan/`
+- [ ] `../docs/architecture.md` exists
+- [ ] `../docs/commands.md` exists
+- [ ] `../scripts/check.sh` exists
+- [ ] `../.gitignore` exists and includes `divan/` entry
 
-| Placeholder            | Value                                   |
-|------------------------|-----------------------------------------|
-| `{{PROJECT_NAME}}`     | The project directory name              |
-| `{{OWNER}}`            | The GitHub org or username              |
-| `{{DESCRIPTION}}`      | One-line project description            |
-| `{{PRIMARY_LANGUAGE}}` | Main language (default: Python)         |
-| `{{PYTHON_VERSION}}`   | Python version (default: 3.12)         |
-| `{{LICENSE}}`          | License type (default: MIT)            |
-| `{{YEAR}}`             | Current year                           |
-
-Ask the operator for values you cannot infer.
-
-## Step 7: Verify
-
-Check that:
-- [ ] No `{{…}}` placeholders remain in any copied file
-- [ ] `README.md` exists and has real content
-- [ ] `docs/architecture.md` exists
-- [ ] `docs/commands.md` exists
-- [ ] `scripts/check.sh` exists and is executable
-- [ ] `.gitignore` exists
-
-## Step 8: Report
-
-Produce this report:
+## Step 7: Report
 
 ```
 ## Initialization Report
-- Target: <path>
-- Profile: <name>
+- Target: ../ (parent project)
+- Profile: [name]
 - Mode: new | retrofit
-- Files created: <count>
-- Files skipped (already exist): <count>
-- Placeholders replaced: <list>
-- Warnings: <any issues or none>
+- Files created: [count]
+- Files skipped: [count]
+- Placeholders replaced: [list]
+- Warnings: [any issues or none]
 ```
 
-## Quick Reference: File Sources
+## File Sources
 
 ```
-bootstrap/common/           → copied to every project
-bootstrap/profiles/<name>/  → overlaid on top of common
-docs/templates/             → human-readable reference (not copied by script)
-docs/standards/             → read for reference (not copied)
+bootstrap/common/           → copied to ../
+bootstrap/profiles/<name>/  → overlaid on ../
+skills/                     → stays in divan/, read by agents on demand
+docs/standards/             → stays in divan/, referenced by ../CLAUDE.md
+docs/servers/               → stays in divan/, read by deploy skills
 ```

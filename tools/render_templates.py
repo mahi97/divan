@@ -26,7 +26,8 @@ DEFAULTS = {
 TEXT_EXTENSIONS = {
     ".md", ".txt", ".py", ".sh", ".ps1", ".toml", ".yaml", ".yml",
     ".json", ".cfg", ".ini", ".editorconfig", ".gitignore", ".gitattributes",
-    ".template", ".html", ".css", ".js", ".ts", ".rst",
+    ".template", ".html", ".css", ".js", ".ts", ".rst", ".tex", ".bib",
+    ".pbs",  # HPC PBS job scripts
 }
 
 # Files that are always text regardless of extension

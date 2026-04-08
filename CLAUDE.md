@@ -1,61 +1,43 @@
-# CLAUDE.md — Divan Template Repository
+# CLAUDE.md — Divan Toolkit
 
-This is `divan`, a workspace template repository. Not an application.
-It provides standards, scaffolding, and initialization tooling for sibling projects.
+This is `divan/`, a personal ML/AI research toolkit. It lives inside a project
+directory and provides skills, standards, and workflows.
+
+**The actual project is `../` (the parent directory).** Divan is the toolkit.
 
 ## Quick Orientation
 
-- `docs/standards/agent-standards.md` — canonical rules (read this first)
-- `PROJECT_INIT_PLAYBOOK.md` — step-by-step project initialization
-- `bootstrap/common/` — files copied to every target project
-- `bootstrap/profiles/` — optional overlays by project type
-- `tools/init_project.py` — automated initializer
+- `skills/custom/` — task-specific skills (GPU deploy, experiments, LaTeX, etc.)
+- `docs/standards/agent-standards.md` — canonical rules
+- `docs/servers/` — bare GPU and HPC cluster access
+- `workflows/` — research pipeline definitions
+- `bootstrap/` — files copied to parent project on init
 
-## Common Tasks
+## Initialize Parent Project
 
-### Initialize a new project
 ```bash
-python tools/init_project.py --target ../my_project --profile research-python \
-  --project-name my_project --owner myorg
+bash init.sh --profile ml-research
 ```
+Or follow `PROJECT_INIT_PLAYBOOK.md` step by step.
 
-### Validate the template
-```bash
-python tools/validate_template.py
-```
+## When Working on the Parent Project
 
-### Initialize manually
-Follow `PROJECT_INIT_PLAYBOOK.md` step by step.
+Read `../CLAUDE.md` — it points back here for skills and standards.
+
+Key skills:
+- `skills/custom/gpu-deploy/` — deploy to bare GPU server
+- `skills/custom/hpc-submit/` — submit to HPC/PBS cluster
+- `skills/custom/experiment-runner/` — run + log experiments
+- `skills/custom/sweep-runner/` — hyperparameter sweeps
+- `skills/custom/monitoring-setup/` — W&B, TensorBoard setup
+- `skills/custom/results-viz/` — visualize results
+- `skills/custom/latex-paper/` — LaTeX paper workflow
+- `skills/custom/project-setup/` — Python env setup
 
 ## Rules
 
-- Never overwrite files without `--force` or user confirmation
+- Never modify divan/ files unless explicitly working on divan itself
 - Never commit secrets
-- Never push without being asked
-- Always replace all `{{PLACEHOLDER}}` tokens when initializing
-- Dry-run first for bulk operations
-- Produce a short report after any significant changes
-
-## Placeholders
-
-Template files use: `{{PROJECT_NAME}}`, `{{OWNER}}`, `{{DESCRIPTION}}`,
-`{{PRIMARY_LANGUAGE}}`, `{{PYTHON_VERSION}}`, `{{LICENSE}}`, `{{YEAR}}`
-
-## What Not to Do
-
-- Don't add application code to this repo
-- Don't modify bootstrap templates without updating docs/standards/
-- Don't strip `{{…}}` placeholders from template files
-- Don't restructure existing target projects during initialization
-
-## Project Structure
-
-```
-divan/
-  docs/standards/          # Canonical standards (source of truth)
-  docs/templates/          # Human-readable document templates
-  bootstrap/common/        # Files for every project
-  bootstrap/profiles/      # Project-type overlays
-  tools/                   # Init and validation scripts
-  examples/                # Reference layouts
-```
+- Never run GPU jobs without confirming server + resources
+- Never delete experiment logs
+- Always commit code before running experiments

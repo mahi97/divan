@@ -1,0 +1,32 @@
+#!/bin/bash
+# PBS job script for {{PROJECT_NAME}} training.
+# Customize resource requests below, then submit with:
+#   qsub scripts/jobs/train.pbs
+#   qsub -v CONFIG=configs/experiment_0001.yaml scripts/jobs/train.pbs
+
+#PBS -N {{PROJECT_NAME}}_train
+#PBS -l select=1:ncpus=8:ngpus=1:mem=32gb
+#PBS -l walltime=24:00:00
+#PBS -q {{QUEUE_NAME}}
+#PBS -o logs/${PBS_JOBID}.out
+#PBS -e logs/${PBS_JOBID}.err
+
+echo "Job ID:   $PBS_JOBID"
+echo "Node:     $(hostname)"
+echo "GPUs:     $CUDA_VISIBLE_DEVICES"
+echo "Start:    $(date)"
+echo "Config:   ${CONFIG:-configs/base.yaml}"
+
+cd $PBS_O_WORKDIR
+
+# Load modules — edit these for your cluster
+# module load python/3.12 cuda/12.1 cudnn/8.9
+
+source .venv/bin/activate
+
+# Create log directory
+mkdir -p logs results/checkpoints
+
+python src/train.py --config "${CONFIG:-configs/base.yaml}"
+
+echo "End: $(date)"

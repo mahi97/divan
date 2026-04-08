@@ -22,31 +22,64 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Validate template structure
-        run: python tools/validate_template.py
+        run: python3 tools/validate_template.py
 
-      - name: Test dry-run initialization
+      - name: Test dry-run initialization (ml-research)
         run: |
-          python tools/init_project.py \
-            --target /tmp/test_project \
-            --profile research-python \
+          # Simulate divan inside a project: create a parent dir, symlink divan into it
+          mkdir -p /tmp/test_parent
+          ln -s ${{ github.workspace }} /tmp/test_parent/divan
+          python3 tools/init_project.py \
+            --target /tmp/test_parent \
+            --profile ml-research \
             --project-name test_project \
             --owner test_org \
             --dry-run
 
-      - name: Test actual initialization
+      - name: Test actual initialization (ml-research)
         run: |
-          python tools/init_project.py \
-            --target /tmp/test_project \
-            --profile research-python \
+          python3 tools/init_project.py \
+            --target /tmp/test_project_ml \
+            --profile ml-research \
             --project-name test_project \
-            --owner test_org
+            --owner test_org \
+            --description "A test ML research project"
 
       - name: Verify initialized project
         run: |
-          test -f /tmp/test_project/README.md
-          test -f /tmp/test_project/docs/architecture.md
-          test -f /tmp/test_project/docs/commands.md
-          test -f /tmp/test_project/scripts/check.sh
-          test -f /tmp/test_project/pyproject.toml
-          # Verify placeholders were replaced
-          ! grep -r '{{PROJECT_NAME}}' /tmp/test_project/ || exit 1
+          test -f /tmp/test_project_ml/README.md
+          test -f /tmp/test_project_ml/docs/architecture.md
+          test -f /tmp/test_project_ml/docs/commands.md
+          test -f /tmp/test_project_ml/scripts/check.sh
+          test -f /tmp/test_project_ml/AGENTS.md
+          test -f /tmp/test_project_ml/CLAUDE.md
+          test -f /tmp/test_project_ml/pyproject.toml
+          test -f /tmp/test_project_ml/configs/base.yaml
+          test -f /tmp/test_project_ml/src/train.py
+          # Verify project-metadata placeholders were replaced
+          # (Server-specific placeholders like {{QUEUE_NAME}} are intentionally left for users to fill)
+          for key in PROJECT_NAME OWNER DESCRIPTION PRIMARY_LANGUAGE PYTHON_VERSION LICENSE YEAR; do
+            if grep -rq "{{${key}}}" /tmp/test_project_ml/; then
+              echo "Unreplaced placeholder: {{${key}}}"
+              exit 1
+            fi
+          done
+
+      - name: Test base profile initialization
+        run: |
+          python3 tools/init_project.py \
+            --target /tmp/test_project_base \
+            --profile base \
+            --project-name test_base \
+            --owner test_org
+
+      - name: Verify base project
+        run: |
+          test -f /tmp/test_project_base/README.md
+          test -f /tmp/test_project_base/AGENTS.md
+          test -f /tmp/test_project_base/scripts/check.sh
+          for key in PROJECT_NAME OWNER DESCRIPTION; do
+            if grep -rq "{{${key}}}" /tmp/test_project_base/; then
+              echo "Unreplaced placeholder: {{${key}}}"; exit 1
+            fi
+          done

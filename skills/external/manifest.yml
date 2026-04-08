@@ -1,0 +1,47 @@
+# External Skills Manifest
+#
+# Lists skills to fetch from external sources.
+# Run `python tools/fetch_skills.py` to install them.
+#
+# Format:
+#   - name: skill-name
+#     source: github | url | local
+#     location: <URL or path>
+#     dest: skills/external/<name>/
+#     description: what it does
+
+skills:
+
+  # Claude Code official skills (from Anthropic's plugin registry)
+  - name: claude-code-guide
+    source: github
+    location: https://github.com/anthropics/claude-code-skills/tree/main/skills/code-review
+    dest: skills/external/code-review/
+    description: General-purpose code review skill
+
+  # Hugging Face skills
+  - name: hf-model-hub
+    source: github
+    location: https://github.com/huggingface/hf-claude-skills/tree/main/skills/model-hub
+    dest: skills/external/hf-model-hub/
+    description: Download, search, and manage models on Hugging Face Hub
+
+  - name: hf-datasets
+    source: github
+    location: https://github.com/huggingface/hf-claude-skills/tree/main/skills/datasets
+    dest: skills/external/hf-datasets/
+    description: Load, inspect, and process Hugging Face datasets
+
+  # Weights & Biases
+  - name: wandb-analysis
+    source: url
+    location: https://raw.githubusercontent.com/wandb/claude-skills/main/analysis/SKILL.md
+    dest: skills/external/wandb-analysis/
+    description: Analyze W&B runs, compare experiments, download results
+
+  # Placeholder for your own remote skills
+  # - name: my-remote-skill
+  #   source: github
+  #   location: https://github.com/{{OWNER}}/my-skills/tree/main/my-skill
+  #   dest: skills/external/my-remote-skill/
+  #   description: Description here

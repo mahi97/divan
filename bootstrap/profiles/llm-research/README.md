@@ -1,71 +1,44 @@
 # Profile: llm-research
 
-For projects involving large language models, generative AI, and ML experiments
-with significant compute requirements.
+LLM/generative AI work — prompts, evals, model management, inference pipelines.
 
 ## When to Use
 
 - Fine-tuning or evaluating LLMs
-- Running inference pipelines
-- Benchmarking model performance
-- Prompt engineering and evaluation
+- Prompt engineering and systematic evaluation
 - RAG, agents, or tool-use research
+- Inference pipelines and benchmarking models
 
-## Files Added (on top of common)
+## Files Added (on top of common + ml-research)
 
-This profile is a conventions overlay. It adds guidance rather than heavy
-scaffolding, since LLM projects vary widely.
+This profile layers on top of `ml-research`. Apply `ml-research` first if
+you want both. Or use `llm-research` standalone for lighter setups.
+
+```
+configs/llm_base.yaml       — LLM-specific config template
+src/prompts/                — Prompt template directory
+src/eval_harness.py         — Evaluation harness template
+```
 
 ## Conventions
 
-### Directory Layout
+- Prompt templates live in `src/prompts/` as `.txt` or `.jinja2` files
+- Never hardcode API keys — use `.env`
+- Pin model versions/revisions in configs
+- Store model weights outside the repo (use HF model IDs or paths)
+- Eval results go in `results/evals/`
+
+## Required Environment Variables
 
 ```
-project/
-  src/              # Source code
-  tests/            # Tests
-  configs/          # Model configs, prompt templates, eval configs
-  data/             # Datasets (gitignored if large)
-  results/          # Model outputs, eval results (gitignored if large)
-  notebooks/        # Exploration notebooks
-  models/           # Model checkpoints (gitignored, use symlinks or DVC)
-  docs/
-    experiments/    # Experiment logs (always committed)
-    literature/     # Paper notes
+WANDB_API_KEY=...
+HF_TOKEN=...         # Hugging Face access token (for gated models)
+OPENAI_API_KEY=...   # If using OpenAI models
+ANTHROPIC_API_KEY=... # If using Claude
 ```
 
-### Model Management
+## Skills to Use
 
-- Never commit model weights to git.
-- Use symlinks, DVC, or cloud storage for large files.
-- Record model source (HuggingFace ID, URL, etc.) in experiment logs.
-- Pin model versions/revisions in configs.
-
-### Compute Awareness
-
-- Document GPU/compute requirements in README.
-- Use config files for hyperparameters — do not hardcode.
-- Support CPU fallback for development/testing.
-- Log hardware info in experiment records.
-
-### Evaluation
-
-- Define eval metrics in a config file.
-- Use standardized eval harnesses when available.
-- Always compare against a documented baseline.
-- Record prompt templates alongside results.
-
-### API Keys and Secrets
-
-- Use `.env` files for API keys (gitignored).
-- Document required environment variables in README.
-- Never log API keys, even partially.
-
-## Recommended Dependencies
-
-Add as needed:
-- `transformers`, `torch` — model loading and inference
-- `datasets` — data loading
-- `evaluate` — metrics
-- `vllm` or `litellm` — efficient inference
-- `wandb` or `mlflow` — experiment tracking (optional)
+- `divan/skills/custom/experiment-runner/`
+- `divan/skills/custom/monitoring-setup/`
+- `divan/skills/custom/hpc-submit/` (for large model runs)

@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """Validate the divan template repository structure.
 
-Checks that required files exist, profiles are well-formed, and placeholder
-conventions are followed.
-
-Usage:
+Run from divan root:
     python tools/validate_template.py
 """
 
@@ -16,21 +13,33 @@ from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
-# Configuration
+# Required files
 # ---------------------------------------------------------------------------
 
 PLACEHOLDER_RE = re.compile(r"\{\{[A-Z_]+\}\}")
 KNOWN_PLACEHOLDERS = {
     "{{PROJECT_NAME}}", "{{OWNER}}", "{{DESCRIPTION}}",
     "{{PRIMARY_LANGUAGE}}", "{{PYTHON_VERSION}}", "{{LICENSE}}", "{{YEAR}}",
+    # Server-specific — OK to leave as-is
+    "{{GPU_SERVER_HOST}}", "{{GPU_SERVER_USER}}", "{{GPU_TYPE}}", "{{GPU_COUNT}}",
+    "{{GPU_VRAM}}", "{{CPU_INFO}}", "{{SERVER_RAM}}", "{{STORAGE_INFO}}",
+    "{{DATA_PATH}}", "{{SCRATCH_PATH}}", "{{PYTHON_SETUP}}", "{{CUDA_VERSION}}",
+    "{{CUDNN_VERSION}}", "{{ENV_ACTIVATE}}", "{{SESSION_NAME}}", "{{CONFIG}}",
+    "{{PROJECT_NAME}}", "{{HPC_LOGIN_NODE}}", "{{HPC_USER}}", "{{LOGIN_NODE_COUNT}}",
+    "{{GPU_QUEUE_INFO}}", "{{CPU_QUEUE_INFO}}", "{{MAX_WALLTIME}}", "{{MAX_GPUS}}",
+    "{{SHARED_DATA_PATH}}", "{{PYTHON_MODULE}}", "{{CUDA_MODULE}}", "{{CUDNN_MODULE}}",
+    "{{QUEUE_NAME}}", "{{NCPUS}}", "{{NGPUS}}", "{{MEM}}", "{{WALLTIME}}",
+    "{{SCRIPT}}", "{{CLUSTER_NAME}}", "{{EXPERIMENT}}", "{{SERVER}}",
+    "{{LOGIN_NODE}}", "{{PAPER_TITLE}}", "{{AUTHOR}}", "{{OWNER}}",
 }
 
 REQUIRED_ROOT_FILES = [
     "README.md",
     "AGENTS.md",
     "CLAUDE.md",
-    "TEMPLATE_USAGE.md",
     "PROJECT_INIT_PLAYBOOK.md",
+    "init.sh",
+    "init.ps1",
     ".gitignore",
     ".editorconfig",
     ".gitattributes",
@@ -46,15 +55,39 @@ REQUIRED_DOCS = [
     "docs/standards/documentation-standards.md",
     "docs/standards/research-workflow.md",
     "docs/standards/project-lifecycle.md",
+    "docs/servers/README.md",
+    "docs/servers/bare-gpu.md",
+    "docs/servers/hpc-pbs.md",
 ]
 
-REQUIRED_TEMPLATES = [
-    "docs/templates/architecture.md",
-    "docs/templates/commands.md",
-    "docs/templates/roadmap.md",
-    "docs/templates/experiment-log.md",
-    "docs/templates/literature-notes.md",
-    "docs/templates/decision-record.md",
+REQUIRED_SKILLS = [
+    "skills/README.md",
+    "skills/custom/gpu-deploy/SKILL.md",
+    "skills/custom/hpc-submit/SKILL.md",
+    "skills/custom/experiment-runner/SKILL.md",
+    "skills/custom/sweep-runner/SKILL.md",
+    "skills/custom/monitoring-setup/SKILL.md",
+    "skills/custom/results-viz/SKILL.md",
+    "skills/custom/latex-paper/SKILL.md",
+    "skills/custom/project-setup/SKILL.md",
+    "skills/custom/repo-onboarding/SKILL.md",
+    "skills/custom/legacy-rewrite/SKILL.md",
+    "skills/external/manifest.yml",
+    "skills/external/README.md",
+]
+
+REQUIRED_AGENTS = [
+    "agents/README.md",
+    "agents/experiment-agent.md",
+    "agents/paper-agent.md",
+]
+
+REQUIRED_WORKFLOWS = [
+    "workflows/README.md",
+    "workflows/train-evaluate.md",
+    "workflows/sweep-and-select.md",
+    "workflows/experiment-to-paper.md",
+    "workflows/new-project-setup.md",
 ]
 
 REQUIRED_COMMON = [
@@ -80,26 +113,13 @@ REQUIRED_COMMON = [
     "bootstrap/common/.codex/config.toml",
 ]
 
-REQUIRED_SKILLS_CLAUDE = [
-    "bootstrap/common/.claude/skills/repo-onboarding/SKILL.md",
-    "bootstrap/common/.claude/skills/legacy-rewrite/SKILL.md",
-    "bootstrap/common/.claude/skills/experiment-runner/SKILL.md",
-    "bootstrap/common/.claude/skills/literature-scan/SKILL.md",
-]
-
-REQUIRED_SKILLS_AGENTS = [
-    "bootstrap/common/.agents/skills/repo-onboarding/SKILL.md",
-    "bootstrap/common/.agents/skills/legacy-rewrite/SKILL.md",
-    "bootstrap/common/.agents/skills/experiment-runner/SKILL.md",
-    "bootstrap/common/.agents/skills/literature-scan/SKILL.md",
-]
-
-REQUIRED_PROFILES = ["base", "research-python", "python-library", "llm-research"]
+REQUIRED_PROFILES = ["base", "ml-research", "llm-research", "general-python"]
 
 REQUIRED_TOOLS = [
     "tools/init_project.py",
     "tools/validate_template.py",
     "tools/render_templates.py",
+    "tools/fetch_skills.py",
 ]
 
 REQUIRED_GITHUB = [
@@ -109,26 +129,21 @@ REQUIRED_GITHUB = [
     ".github/PULL_REQUEST_TEMPLATE.md",
 ]
 
-REQUIRED_EXAMPLES = [
-    "examples/workspace-layout.md",
-    "examples/initialized-project-tree.md",
-]
-
 
 # ---------------------------------------------------------------------------
 # Checks
 # ---------------------------------------------------------------------------
 
-def find_template_root() -> Path:
+def find_divan_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
 def check_files_exist(root: Path, paths: list[str], label: str) -> list[str]:
-    errors = []
-    for p in paths:
-        if not (root / p).exists():
-            errors.append(f"[{label}] Missing: {p}")
-    return errors
+    return [
+        f"[{label}] Missing: {p}"
+        for p in paths
+        if not (root / p).exists()
+    ]
 
 
 def check_profiles(root: Path) -> list[str]:
@@ -138,37 +153,35 @@ def check_profiles(root: Path) -> list[str]:
         if not pdir.is_dir():
             errors.append(f"[profiles] Missing profile directory: {profile}")
             continue
-        readme = pdir / "README.md"
-        if not readme.exists():
+        if not (pdir / "README.md").exists():
             errors.append(f"[profiles] Missing README.md in profile: {profile}")
     return errors
 
 
 def check_no_empty_files(root: Path) -> list[str]:
-    """Check that bootstrap common files are not empty stubs."""
     errors = []
-    common = root / "bootstrap" / "common"
-    if not common.is_dir():
-        return ["[content] bootstrap/common/ directory not found"]
-
-    for path in common.rglob("*"):
-        if path.is_file() and path.stat().st_size == 0:
-            rel = path.relative_to(root)
-            errors.append(f"[content] Empty file: {rel}")
+    for check_dir in ["bootstrap/common", "skills/custom", "workflows", "agents"]:
+        d = root / check_dir
+        if not d.is_dir():
+            continue
+        for path in d.rglob("*"):
+            if path.is_file() and path.stat().st_size == 0:
+                errors.append(f"[content] Empty file: {path.relative_to(root)}")
     return errors
 
 
 def check_placeholder_consistency(root: Path) -> list[str]:
-    """Check that bootstrap files only use known placeholders."""
+    """Check bootstrap files only use known placeholders."""
     warnings = []
-    common = root / "bootstrap" / "common"
-    profiles = root / "bootstrap" / "profiles"
-
-    for base_dir in [common, profiles]:
-        if not base_dir.is_dir():
+    for base_dir in ["bootstrap/common", "bootstrap/profiles"]:
+        d = root / base_dir
+        if not d.is_dir():
             continue
-        for path in base_dir.rglob("*"):
+        for path in d.rglob("*"):
             if not path.is_file():
+                continue
+            # Skip server docs — they intentionally have unfilled server-specific placeholders
+            if "servers" in str(path):
                 continue
             try:
                 content = path.read_text(encoding="utf-8")
@@ -179,23 +192,35 @@ def check_placeholder_consistency(root: Path) -> list[str]:
             if unknown:
                 rel = path.relative_to(root)
                 warnings.append(
-                    f"[placeholders] Unknown placeholder(s) in {rel}: {', '.join(sorted(unknown))}"
+                    f"[placeholders] Unknown in {rel}: {', '.join(sorted(unknown))}"
                 )
     return warnings
 
 
 def check_scripts_executable(root: Path) -> list[str]:
-    """Check that .sh scripts have the executable bit set."""
     import os
-
     errors = []
-    scripts_dir = root / "bootstrap" / "common" / "scripts"
-    if not scripts_dir.is_dir():
-        return []
-    for sh_file in scripts_dir.glob("*.sh"):
+    for sh_file in (root / "bootstrap" / "common" / "scripts").glob("*.sh"):
         if not os.access(sh_file, os.X_OK):
-            rel = sh_file.relative_to(root)
-            errors.append(f"[scripts] Not executable: {rel}")
+            errors.append(f"[scripts] Not executable: {sh_file.relative_to(root)}")
+    if (root / "init.sh").exists() and not os.access(root / "init.sh", os.X_OK):
+        errors.append("[scripts] init.sh is not executable")
+    return errors
+
+
+def check_skill_format(root: Path) -> list[str]:
+    """Check that each custom skill has a name frontmatter."""
+    errors = []
+    for skill_dir in (root / "skills" / "custom").iterdir():
+        if not skill_dir.is_dir():
+            continue
+        skill_md = skill_dir / "SKILL.md"
+        if not skill_md.exists():
+            errors.append(f"[skills] Missing SKILL.md in: {skill_dir.name}")
+            continue
+        content = skill_md.read_text(encoding="utf-8")
+        if "name:" not in content:
+            errors.append(f"[skills] Missing 'name:' frontmatter in: {skill_dir.name}/SKILL.md")
     return errors
 
 
@@ -204,26 +229,26 @@ def check_scripts_executable(root: Path) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def main() -> int:
-    root = find_template_root()
-    print(f"Validating template at: {root}")
+    root = find_divan_root()
+    print(f"Validating divan at: {root}")
     print()
 
     all_issues: list[str] = []
 
     checks = [
-        ("Root files", lambda: check_files_exist(root, REQUIRED_ROOT_FILES, "root")),
-        ("Documentation", lambda: check_files_exist(root, REQUIRED_DOCS, "docs")),
-        ("Templates", lambda: check_files_exist(root, REQUIRED_TEMPLATES, "templates")),
-        ("Common bootstrap", lambda: check_files_exist(root, REQUIRED_COMMON, "common")),
-        ("Claude skills", lambda: check_files_exist(root, REQUIRED_SKILLS_CLAUDE, "claude-skills")),
-        ("Agent skills", lambda: check_files_exist(root, REQUIRED_SKILLS_AGENTS, "agent-skills")),
-        ("Profiles", lambda: check_profiles(root)),
-        ("Tools", lambda: check_files_exist(root, REQUIRED_TOOLS, "tools")),
-        ("GitHub", lambda: check_files_exist(root, REQUIRED_GITHUB, "github")),
-        ("Examples", lambda: check_files_exist(root, REQUIRED_EXAMPLES, "examples")),
-        ("Non-empty files", lambda: check_no_empty_files(root)),
-        ("Placeholder consistency", lambda: check_placeholder_consistency(root)),
-        ("Script permissions", lambda: check_scripts_executable(root)),
+        ("Root files",          lambda: check_files_exist(root, REQUIRED_ROOT_FILES, "root")),
+        ("Documentation",       lambda: check_files_exist(root, REQUIRED_DOCS, "docs")),
+        ("Skills",              lambda: check_files_exist(root, REQUIRED_SKILLS, "skills")),
+        ("Agents",              lambda: check_files_exist(root, REQUIRED_AGENTS, "agents")),
+        ("Workflows",           lambda: check_files_exist(root, REQUIRED_WORKFLOWS, "workflows")),
+        ("Bootstrap common",    lambda: check_files_exist(root, REQUIRED_COMMON, "common")),
+        ("Profiles",            lambda: check_profiles(root)),
+        ("Tools",               lambda: check_files_exist(root, REQUIRED_TOOLS, "tools")),
+        ("GitHub",              lambda: check_files_exist(root, REQUIRED_GITHUB, "github")),
+        ("Non-empty files",     lambda: check_no_empty_files(root)),
+        ("Placeholder syntax",  lambda: check_placeholder_consistency(root)),
+        ("Script permissions",  lambda: check_scripts_executable(root)),
+        ("Skill format",        lambda: check_skill_format(root)),
     ]
 
     for name, check_fn in checks:

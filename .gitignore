@@ -52,3 +52,9 @@ credentials.json
 # Lock files (template repo does not ship lock files)
 uv.lock
 poetry.lock
+
+# External skills (fetched via tools/fetch_skills.py, not committed)
+skills/external/*/SKILL.md
+
+# Divan-internal venv (if anyone installs one here)
+.venv/

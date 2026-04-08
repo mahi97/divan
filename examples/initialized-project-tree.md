@@ -1,136 +1,136 @@
 # Example: Initialized Project Tree
 
-This shows the full file tree of a project initialized with the
-`research-python` profile.
+Full tree after `bash divan/init.sh --profile ml-research --project-name attention_study --owner mahi`
 
-## Command
+## Command Run
 
 ```bash
-python tools/init_project.py \
-  --target ../my_experiment \
-  --profile research-python \
-  --project-name my_experiment \
-  --owner research-lab \
-  --description "Transformer attention pattern analysis"
+cd ~/research/attention_study
+git clone https://github.com/mahi/divan.git
+cd divan && bash init.sh \
+  --profile ml-research \
+  --project-name attention_study \
+  --owner mahi \
+  --description "Attention pattern analysis in transformer models"
 ```
 
 ## Resulting Tree
 
-```
-my_experiment/
-├── .agents/
-│   └── skills/
-│       ├── README.md
-│       ├── experiment-runner/
-│       │   └── SKILL.md
-│       ├── legacy-rewrite/
-│       │   └── SKILL.md
-│       ├── literature-scan/
-│       │   └── SKILL.md
-│       └── repo-onboarding/
-│           └── SKILL.md
-├── .claude/
-│   ├── settings.json
-│   └── skills/
-│       ├── README.md
-│       ├── experiment-runner/
-│       │   └── SKILL.md
-│       ├── legacy-rewrite/
-│       │   └── SKILL.md
-│       ├── literature-scan/
-│       │   └── SKILL.md
-│       └── repo-onboarding/
-│           └── SKILL.md
-├── .codex/
-│   └── config.toml
+```text
+attention_study/
+├── divan/                             ← your toolkit (stays here)
+│   ├── init.sh
+│   ├── skills/custom/
+│   │   ├── gpu-deploy/SKILL.md
+│   │   ├── hpc-submit/SKILL.md
+│   │   ├── experiment-runner/SKILL.md
+│   │   ├── sweep-runner/SKILL.md
+│   │   ├── monitoring-setup/SKILL.md
+│   │   ├── results-viz/SKILL.md
+│   │   ├── latex-paper/SKILL.md
+│   │   └── ...
+│   ├── docs/servers/
+│   │   ├── bare-gpu.md   ← fill in your server details
+│   │   └── hpc-pbs.md    ← fill in your cluster details
+│   └── workflows/
+│       ├── train-evaluate.md
+│       ├── sweep-and-select.md
+│       └── experiment-to-paper.md
+│
+├── AGENTS.md                          ← created by init
+├── CLAUDE.md                          ← created by init
+├── README.md                          ← created by init
+├── .gitignore                         ← created by init (divan/ is excluded)
 ├── .editorconfig
 ├── .gitattributes
-├── .gitignore
-├── AGENTS.md
-├── CLAUDE.md
-├── README.md
+│
+├── pyproject.toml                     ← ml-research profile
+├── src/
+│   ├── __init__.py
+│   ├── train.py                       ← training entry point
+│   ├── evaluate.py                    ← evaluation entry point
+│   └── utils/
+│       └── config.py
+│
+├── tests/
+│   └── test_smoke.py
+│
+├── configs/
+│   ├── base.yaml                      ← base experiment config
+│   └── sweeps/
+│       └── template.yaml
+│
 ├── docs/
 │   ├── architecture.md
 │   ├── commands.md
-│   ├── decisions/
-│   │   └── README.md
-│   ├── experiments/
-│   │   └── README.md
-│   ├── literature/
-│   │   └── README.md
-│   └── roadmap.md
-├── pyproject.toml
+│   ├── roadmap.md
+│   ├── decisions/README.md
+│   ├── experiments/README.md          ← logs go here
+│   └── literature/README.md
+│
 ├── scripts/
-│   ├── check.ps1
-│   ├── check.sh
-│   ├── lint.ps1
-│   ├── lint.sh
-│   ├── test.ps1
-│   └── test.sh
-├── src/
-│   └── __init__.py
-└── tests/
-    └── test_smoke.py
-```
-
-## Sample File Content After Placeholder Rendering
-
-### README.md (excerpt)
-
-```markdown
-# my_experiment
-
-Transformer attention pattern analysis
-
-## Quick Start
-
-git clone https://github.com/research-lab/my_experiment.git
-cd my_experiment
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-scripts/check.sh
-```
-
-### CLAUDE.md (excerpt)
-
-```markdown
-# CLAUDE.md — my_experiment
-
-Transformer attention pattern analysis
-
-## Quick Reference
-
-- Language: Python
-- Test: scripts/test.sh or pytest
-- Lint: scripts/lint.sh or ruff check .
-- Check all: scripts/check.sh
-```
-
-### pyproject.toml (excerpt)
-
-```toml
-[project]
-name = "my_experiment"
-version = "0.1.0"
-description = "Transformer attention pattern analysis"
-requires-python = ">=3.12"
-license = "MIT"
-authors = [
-    { name = "research-lab" },
-]
+│   ├── check.sh  / check.ps1
+│   ├── test.sh   / test.ps1
+│   ├── lint.sh   / lint.ps1
+│   └── jobs/
+│       └── train.pbs                  ← HPC job script
+│
+├── paper/
+│   ├── main.tex
+│   └── references.bib
+│
+├── .claude/
+│   ├── settings.json
+│   └── skills/
+│       ├── repo-onboarding/SKILL.md
+│       ├── experiment-runner/SKILL.md
+│       └── ...
+│
+├── .agents/skills/
+│   └── ...
+│
+└── .codex/config.toml
 ```
 
 ## Initialization Report
 
-```
+```text
 ## Initialization Report
-- Target: /home/user/research/my_experiment
-- Profile: research-python
-- Files created: 31
+- Target: /home/mahi/research/attention_study
+- Profile: ml-research
+- Files created: 43
 - Files skipped (already exist): 0
 - Files overwritten: 0
 - Files backed up: 0
-- Placeholders: {{DESCRIPTION}} -> Transformer attention pattern analysis, ...
+- Placeholders: {{PROJECT_NAME}}=attention_study, {{OWNER}}=mahi,
+                {{DESCRIPTION}}=Attention pattern analysis..., {{YEAR}}=2026
 - Errors: none
 ```
+
+## What to Do Next
+
+1. Fill in server details in `divan/docs/servers/bare-gpu.md` (your GPU server)
+   and `divan/docs/servers/hpc-pbs.md` (your HPC cluster).
+
+2. Set up Python environment:
+   ```bash
+   python3 -m venv .venv && source .venv/bin/activate
+   pip install -e ".[ml]"
+   ```
+
+3. Configure monitoring:
+   ```bash
+   cp .env.example .env   # create if needed
+   echo "WANDB_API_KEY=your_key" >> .env
+   ```
+
+4. Run smoke test:
+   ```bash
+   scripts/check.sh
+   ```
+
+5. Start first experiment:
+   ```bash
+   # Follow divan/workflows/train-evaluate.md
+   # or ask your AI agent to use the experiment-runner skill
+   ```
