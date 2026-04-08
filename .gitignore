@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Testing / Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets — never commit these
+.env
+.env.local
+.env.*.local
+credentials.json
+*.pem
+*.key
+
+# Notebooks — allow .ipynb but ignore checkpoints
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# Lock files (template repo does not ship lock files)
+uv.lock
+poetry.lock
