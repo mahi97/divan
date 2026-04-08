@@ -1,0 +1,9 @@
+# Codex configuration for {{PROJECT_NAME}}
+
+[project]
+name = "{{PROJECT_NAME}}"
+description = "{{DESCRIPTION}}"
+
+[instructions]
+# Point Codex to the AGENTS.md for detailed instructions
+file = "AGENTS.md"

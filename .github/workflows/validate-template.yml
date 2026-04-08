@@ -1,0 +1,52 @@
+name: Validate Template
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Validate template structure
+        run: python tools/validate_template.py
+
+      - name: Test dry-run initialization
+        run: |
+          python tools/init_project.py \
+            --target /tmp/test_project \
+            --profile research-python \
+            --project-name test_project \
+            --owner test_org \
+            --dry-run
+
+      - name: Test actual initialization
+        run: |
+          python tools/init_project.py \
+            --target /tmp/test_project \
+            --profile research-python \
+            --project-name test_project \
+            --owner test_org
+
+      - name: Verify initialized project
+        run: |
+          test -f /tmp/test_project/README.md
+          test -f /tmp/test_project/docs/architecture.md
+          test -f /tmp/test_project/docs/commands.md
+          test -f /tmp/test_project/scripts/check.sh
+          test -f /tmp/test_project/pyproject.toml
+          # Verify placeholders were replaced
+          ! grep -r '{{PROJECT_NAME}}' /tmp/test_project/ || exit 1
