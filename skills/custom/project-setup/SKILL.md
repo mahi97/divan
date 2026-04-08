@@ -19,53 +19,48 @@ description: Set up a Python project environment with proper dependencies and to
 
 ## Steps
 
-1. **Check Python version:**
+1. **Install and verify `uv`:**
    ```bash
-   python3 --version
+   uv --version
    ```
-   If wrong version, recommend pyenv or system install.
+   If missing, install `uv` first. Use `uv` as the default workflow for all Python projects.
 
-2. **Create virtual environment:**
+2. **Check Python version:**
    ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate  # Linux/macOS
-   # .venv\Scripts\Activate.ps1  # Windows
+   uv python list
    ```
+   Choose the required interpreter version if it is not already available.
 
-3. **Install project in dev mode:**
+3. **Ensure `pyproject.toml` exists:**
+   Keep project metadata, dependencies, and tool configuration in `pyproject.toml`.
+   If no `pyproject.toml` exists, create one from the profile templates.
+
+4. **Sync the environment with `uv`:**
    ```bash
-   pip install -e ".[dev]"
+   uv sync --extra dev
    ```
-   If no pyproject.toml exists, create one (see profile templates).
-
-4. **Install ML dependencies (if ml-research):**
+   Add profile extras as needed, for example:
    ```bash
-   pip install torch torchvision  # or tensorflow
-   pip install numpy pandas scikit-learn
-   pip install wandb tensorboard
-   pip install matplotlib seaborn
-   ```
-
-5. **Install LLM dependencies (if llm-research):**
-   ```bash
-   pip install transformers datasets evaluate
-   pip install accelerate
-   pip install openai anthropic  # API clients
-   pip install vllm  # or litellm for inference
+   uv sync --extra dev --extra ml
+   uv sync --extra dev --extra ml --extra llm
    ```
 
-6. **Set up dev tools:**
+5. **Install divan meta-tools (optional but recommended):**
    ```bash
-   pip install ruff pytest mypy
+   # Skill generation from any doc source (fallback when no skill exists)
+   uv tool install skill-seekers
+
+   # Knowledge graph generation for code + docs + papers
+   uv tool install graphifyy
    ```
 
-7. **Verify setup:**
+6. **Verify setup:**
    ```bash
    scripts/check.sh  # Should pass lint + tests
-   python -c "import torch; print(torch.cuda.is_available())"  # GPU check
+   uv run python -c "import torch; print(torch.cuda.is_available())"  # GPU check
    ```
 
-8. **Create .env for secrets (if needed):**
+7. **Create `.env` for secrets (if needed):**
    ```bash
    touch .env
    echo "WANDB_API_KEY=your_key_here" >> .env
@@ -73,12 +68,15 @@ description: Set up a Python project environment with proper dependencies and to
    ```
    Ensure `.env` is in `.gitignore`.
 
+8. **Adopt TDD from the start:**
+   Write or update a failing test before adding new behavior. Keep `pytest` as the default test runner and execute it through `uv run`.
+
 ## Output
 
 ```
 ## Setup Report
 - Python: 3.12.x
-- venv: .venv (active)
+- Environment: managed by uv
 - Dependencies: installed (X packages)
 - Dev tools: ruff, pytest, mypy
 - GPU: available (NVIDIA A100, CUDA 12.x) | not available
@@ -88,7 +86,7 @@ description: Set up a Python project environment with proper dependencies and to
 
 ## Safety
 
-- Never install packages globally (always use venv)
+- Never fall back to ad hoc global `pip install` for project dependencies
 - Never commit `.env` or API keys
 - Pin major versions of critical dependencies (torch, transformers)
 - Check GPU driver compatibility before installing CUDA-dependent packages

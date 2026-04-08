@@ -12,8 +12,11 @@ results analysis, and paper writing.
 3. **Separate code from results.** Code in `src/`, results in `results/`,
    logs in `docs/experiments/`.
 4. **Config-driven experiments.** Hyperparameters live in `configs/`, not in code.
-5. **Commit before running.** Always commit before starting an experiment.
-6. **Track compute costs.** Note GPU hours, wall time, server used.
+5. **Configurable storage.** Data, cache, checkpoint, and artifact locations must live in config, not library defaults.
+6. **Explicit GPU selection.** GPU device choice must be configurable so users can select one GPU or a set of GPUs without editing code.
+7. **TDD for research code.** Start new behavior with a failing test or regression case, then implement.
+8. **Commit before running.** Always commit before starting an experiment.
+9. **Track compute costs.** Note GPU hours, wall time, server used.
 
 ## Research Pipeline
 
@@ -21,13 +24,14 @@ results analysis, and paper writing.
 1. Literature    → Read papers, write notes in docs/literature/
 2. Hypothesis    → Write docs/experiments/NNNN-title.md
 3. Config        → Create configs/experiment_NNNN.yaml
-4. Code          → Implement in src/, commit
-5. Deploy        → Push to GPU server (bare or HPC)
-6. Run           → Execute with monitoring enabled
-7. Monitor       → Watch metrics (W&B, TensorBoard, logs)
-8. Analyze       → Pull results, update experiment log
-9. Visualize     → Generate plots, compare baselines
-10. Paper        → Write up findings in LaTeX
+4. Test          → Write or update a failing test
+5. Code          → Implement in src/, commit
+6. Deploy        → Push to GPU server (bare or HPC)
+7. Run           → Execute with monitoring enabled
+8. Monitor       → Watch metrics (W&B, TensorBoard, logs)
+9. Analyze       → Pull results, update experiment log
+10. Visualize    → Generate plots, compare baselines
+11. Paper        → Write up findings in LaTeX
 ```
 
 ## Directory Layout
@@ -75,11 +79,20 @@ training:
 
 data:
   dataset: wikitext-103
+  data_dir: data/datasets/
   split_ratio: [0.8, 0.1, 0.1]
+
+paths:
+  cache_root: .cache/
+  hf_home: .cache/huggingface/
+  hf_datasets_cache: .cache/huggingface/datasets/
+  hf_hub_cache: .cache/huggingface/hub/
+  checkpoint_dir: results/checkpoints/
 
 compute:
   server: bare-gpu  # or hpc
-  gpus: 1
+  gpu_devices: [0]
+  gpu_count: 1
   gpu_type: A100
 ```
 
@@ -107,9 +120,11 @@ Before declaring an experiment complete:
 
 - [ ] Code is committed, commit hash recorded
 - [ ] Config file exists in `configs/` and is committed
-- [ ] Dependencies pinned (lock file or requirements.txt)
+- [ ] Dependencies pinned in `uv.lock` or another committed lock file
+- [ ] Data and cache locations are configured explicitly, not left to library defaults
 - [ ] Dataset source and version documented
 - [ ] Random seeds set and recorded
+- [ ] GPU selection is configurable and recorded
 - [ ] Hardware noted (GPU type, count, server name)
 - [ ] Experiment re-runnable from log + config + commit
 

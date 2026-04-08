@@ -26,11 +26,16 @@ paper/references.bib    — BibTeX references file
 
 ## Conventions
 
+- Use `uv` with `pyproject.toml`; do not rely on ad hoc `pip` workflows
 - Configs in `configs/`, never hardcoded hyperparameters
+- Keep data, cache, artifact, and checkpoint locations configurable in `configs/`
+- Do not rely on default Hugging Face cache locations
+- Keep GPU selection configurable in `configs/` so users can choose one GPU or several
 - Results in `results/` (gitignored)
 - Data in `data/` (gitignored)
 - Experiment logs in `docs/experiments/`
 - Paper in `paper/`
+- Follow test-driven development: start with a failing test or regression case
 
 ## Skills to Use
 

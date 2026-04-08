@@ -72,6 +72,8 @@ REQUIRED_SKILLS = [
     "skills/custom/project-setup/SKILL.md",
     "skills/custom/repo-onboarding/SKILL.md",
     "skills/custom/legacy-rewrite/SKILL.md",
+    "skills/custom/skill-generation/SKILL.md",
+    "skills/custom/graphify/SKILL.md",
     "skills/external/manifest.yml",
     "skills/external/README.md",
 ]

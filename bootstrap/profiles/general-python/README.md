@@ -19,6 +19,7 @@ tests/test_smoke.py — Basic smoke test
 ## Conventions
 
 - Source code in `src/<package_name>/`
-- Use `pyproject.toml` for all config
+- Use `uv` with `pyproject.toml` for dependency management and command execution
+- Follow test-driven development by default
 - Semantic versioning
 - CHANGELOG.md for release notes (create manually)

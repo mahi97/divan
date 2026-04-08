@@ -16,7 +16,9 @@ library-specific config should be customized after initialization.
 ## Conventions
 
 - Package code goes in `src/<package_name>/`
+- Use `uv` with `pyproject.toml` for installs, locking, and publishing workflows
 - Use `pyproject.toml` for all metadata (no `setup.py`)
+- Follow test-driven development by default
 - Include a `py.typed` marker for type-checked packages
 - Write a `CHANGELOG.md` for release notes
 - Use semantic versioning

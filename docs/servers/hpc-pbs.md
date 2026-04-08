@@ -121,9 +121,7 @@ rsync -avz \
 ssh hpc "
   cd ~/projects/{{PROJECT_NAME}} &&
   module load {{PYTHON_MODULE}} &&
-  python3 -m venv .venv &&
-  source .venv/bin/activate &&
-  pip install -e '.[dev]'
+  uv sync --extra dev
 "
 
 # 3. Create log directory on scratch

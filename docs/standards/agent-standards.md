@@ -27,6 +27,8 @@ project_root/
   README.md                  # Required
   AGENTS.md                  # Required — points agents to divan/
   CLAUDE.md                  # Required — points Claude to divan/
+  pyproject.toml             # Required — project metadata and tool config
+  uv.lock                    # Recommended — dependency lockfile managed by uv
   src/ or <package>/         # Source code
   tests/                     # Tests
   configs/                   # Experiment configs (YAML/TOML)
@@ -78,6 +80,8 @@ After initialization, no `{{…}}` placeholders should remain.
 - Type hints on all public functions.
 - Prefer `pathlib` over `os.path`.
 - Prefer stdlib. Minimize external dependencies.
+- Use `pyproject.toml` as the Python project source of truth.
+- Use `uv` for environment creation, dependency installation, locking, and command execution.
 - No comments that restate the code. Comment non-obvious decisions only.
 - `TODO(name):` for planned work. `HACK:` for intentional workarounds.
 - Never leave commented-out code. Delete it.
@@ -85,6 +89,7 @@ After initialization, no `{{…}}` placeholders should remain.
 ## 6. Testing
 
 - `tests/` directory, `pytest` as runner.
+- Follow test-driven development by default: write or update the failing test first, then implement.
 - Test files mirror source: `src/foo/bar.py` → `tests/foo/test_bar.py`.
 - Every module should have at least a smoke test.
 - CI runs tests on every push and PR.
@@ -96,6 +101,9 @@ After initialization, no `{{…}}` placeholders should remain.
 - Never delete experiment logs. Mark failed experiments as failed.
 - Commit code before running experiments. Record the commit hash.
 - Store configs in `configs/` as YAML or TOML.
+- Keep all data, cache, artifact, and checkpoint locations configurable in `configs/`.
+- Do not rely on default library cache locations, especially for Hugging Face datasets or model caches.
+- Keep GPU selection explicit in config so users can choose one GPU or a set of GPUs without code edits.
 
 ## 8. GPU Server Rules
 
@@ -127,7 +135,31 @@ After initialization, no `{{…}}` placeholders should remain.
 - If stuck for 3+ attempts on the same problem, stop and report.
 - For GPU jobs: monitor resource usage, set timeouts, check for hangs.
 
-## 11. Agent Output Format
+## 11. Skill Discovery
+
+Before starting any task that involves an unfamiliar library, tool, or framework, an agent
+**must** check for an existing skill rather than relying on memorized knowledge.
+
+**Lookup order:**
+
+1. **Custom skills** — `divan/skills/custom/` (hand-written, project-specific)
+2. **External skills** — `divan/skills/external/` (fetched from remotes)
+3. **Manifest fetch** — run `python divan/tools/fetch_skills.py` to pull anything in `manifest.yml`
+4. **Generate** — if no skill exists, use Skill_Seekers to auto-generate one:
+   ```bash
+   pip install skill-seekers
+   skill-seekers create <docs-or-repo-url>
+   skill-seekers package output/ --target claude
+   mkdir -p divan/skills/external/<tool-name>
+   cp output/SKILL.md divan/skills/external/<tool-name>/SKILL.md
+   ```
+
+See `divan/skills/custom/skill-generation/SKILL.md` for the full workflow.
+
+**Rule:** Never start work on an unfamiliar tool without first completing steps 1–3 above.
+Generated skills must be verified before following. Add useful generated skills to the manifest.
+
+## 12. Agent Output Format
 
 After any significant operation, produce a short report:
 

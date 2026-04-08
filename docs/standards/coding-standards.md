@@ -36,7 +36,9 @@ opinionated to reduce decision fatigue.
 
 ### Dependencies
 - Minimize external dependencies. Prefer stdlib.
-- Pin exact versions in lock files, use compatible ranges in pyproject.toml.
+- Manage environments and lockfiles with `uv`.
+- Keep dependency declarations in `pyproject.toml`.
+- Pin exact versions in lock files, use compatible ranges in `pyproject.toml`.
 - Evaluate maintenance status before adding a new dependency.
 
 ---
@@ -64,6 +66,7 @@ opinionated to reduce decision fatigue.
 - Never leave commented-out code. Delete it — git has history.
 
 ### Testing
+- Follow test-driven development when adding features or fixing bugs: start with a failing test or regression case.
 - Test files live in `tests/` and mirror the source tree.
 - Name test files `test_<module>.py`.
 - Name test functions `test_<behavior>`, not `test_<method_name>`.

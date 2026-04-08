@@ -22,11 +22,16 @@ src/eval_harness.py         — Evaluation harness template
 
 ## Conventions
 
+- Use `uv` with `pyproject.toml`
 - Prompt templates live in `src/prompts/` as `.txt` or `.jinja2` files
 - Never hardcode API keys — use `.env`
 - Pin model versions/revisions in configs
 - Store model weights outside the repo (use HF model IDs or paths)
+- Keep Hugging Face cache, dataset, and model storage locations configurable in `configs/`
+- Do not rely on default Hugging Face cache directories
+- Keep GPU selection configurable in `configs/`
 - Eval results go in `results/evals/`
+- Follow test-driven development for eval and data pipeline changes
 
 ## Required Environment Variables
 

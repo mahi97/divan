@@ -21,6 +21,8 @@ tests/test_smoke.py — Smoke test to verify setup works
 ## Conventions
 
 - Source code goes in `src/` (or rename the package after init)
+- Use `uv` with `pyproject.toml`
+- Follow test-driven development by default
 - Experiments are logged in `docs/experiments/`
 - Notebooks live in `notebooks/` (create as needed)
 - Large data goes in `data/` (gitignored by default)

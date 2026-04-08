@@ -84,9 +84,7 @@ rsync -avz \
 ```bash
 ssh gpu "
   cd ~/projects/{{PROJECT_NAME}} &&
-  python3 -m venv .venv &&
-  source .venv/bin/activate &&
-  pip install -e '.[dev]'
+  uv sync --extra dev
 "
 ```
 
@@ -95,8 +93,8 @@ ssh gpu "
 ```bash
 # Start a new session
 ssh gpu "tmux new-session -d -s {{SESSION_NAME}} \
-  'cd ~/projects/{{PROJECT_NAME}} && source .venv/bin/activate && \
-   python src/train.py --config configs/{{CONFIG}}'"
+  'cd ~/projects/{{PROJECT_NAME}} && \
+   uv run python src/train.py --config configs/{{CONFIG}}'"
 
 # Attach to watch
 ssh gpu "tmux attach -t {{SESSION_NAME}}"

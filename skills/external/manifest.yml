@@ -12,34 +12,161 @@
 
 skills:
 
-  # Claude Code official skills (from Anthropic's plugin registry)
-  - name: claude-code-guide
-    source: github
-    location: https://github.com/anthropics/claude-code-skills/tree/main/skills/code-review
-    dest: skills/external/code-review/
-    description: General-purpose code review skill
+  # ─────────────────────────────────────────────────────────────────
+  # Engineering workflow skills (addyosmani/agent-skills)
+  # Full lifecycle: idea → spec → plan → build → test → ship
+  # ─────────────────────────────────────────────────────────────────
 
-  # Hugging Face skills
-  - name: hf-model-hub
+  - name: idea-refine
     source: github
-    location: https://github.com/huggingface/hf-claude-skills/tree/main/skills/model-hub
-    dest: skills/external/hf-model-hub/
-    description: Download, search, and manage models on Hugging Face Hub
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/idea-refine
+    dest: skills/external/idea-refine/
+    description: Clarify and sharpen a rough idea before starting work
 
-  - name: hf-datasets
+  - name: spec-driven-development
     source: github
-    location: https://github.com/huggingface/hf-claude-skills/tree/main/skills/datasets
-    dest: skills/external/hf-datasets/
-    description: Load, inspect, and process Hugging Face datasets
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/spec-driven-development
+    dest: skills/external/spec-driven-development/
+    description: Write a clear spec before writing code
 
+  - name: planning-and-task-breakdown
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/planning-and-task-breakdown
+    dest: skills/external/planning-and-task-breakdown/
+    description: Break a feature into actionable, verifiable tasks
+
+  - name: incremental-implementation
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/incremental-implementation
+    dest: skills/external/incremental-implementation/
+    description: Build features in small, reviewable increments
+
+  - name: test-driven-development
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/test-driven-development
+    dest: skills/external/test-driven-development/
+    description: Write tests first, then implement
+
+  - name: context-engineering
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/context-engineering
+    dest: skills/external/context-engineering/
+    description: Manage and optimize context for long agent sessions
+
+  - name: frontend-ui-engineering
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/frontend-ui-engineering
+    dest: skills/external/frontend-ui-engineering/
+    description: Build accessible, responsive UI components
+
+  - name: api-and-interface-design
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/api-and-interface-design
+    dest: skills/external/api-and-interface-design/
+    description: Design clean, consistent APIs and interfaces
+
+  - name: browser-testing-with-devtools
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/browser-testing-with-devtools
+    dest: skills/external/browser-testing-with-devtools/
+    description: Test and debug web UIs with browser developer tools
+
+  - name: debugging-and-error-recovery
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/debugging-and-error-recovery
+    dest: skills/external/debugging-and-error-recovery/
+    description: Systematically diagnose and fix bugs
+
+  - name: code-review-and-quality
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/code-review-and-quality
+    dest: skills/external/code-review-and-quality/
+    description: Review code for correctness, clarity, and maintainability
+
+  - name: code-simplification
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/code-simplification
+    dest: skills/external/code-simplification/
+    description: Reduce complexity without changing behavior
+
+  - name: security-and-hardening
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/security-and-hardening
+    dest: skills/external/security-and-hardening/
+    description: Identify and fix security vulnerabilities
+
+  - name: performance-optimization
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/performance-optimization
+    dest: skills/external/performance-optimization/
+    description: Profile and optimize for speed and memory
+
+  - name: git-workflow-and-versioning
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/git-workflow-and-versioning
+    dest: skills/external/git-workflow-and-versioning/
+    description: Manage branches, commits, and version history
+
+  - name: ci-cd-and-automation
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/ci-cd-and-automation
+    dest: skills/external/ci-cd-and-automation/
+    description: Set up and maintain CI/CD pipelines
+
+  - name: deprecation-and-migration
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/deprecation-and-migration
+    dest: skills/external/deprecation-and-migration/
+    description: Safely migrate away from deprecated APIs and patterns
+
+  - name: documentation-and-adrs
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/documentation-and-adrs
+    dest: skills/external/documentation-and-adrs/
+    description: Write docs and architectural decision records
+
+  - name: shipping-and-launch
+    source: github
+    location: https://github.com/addyosmani/agent-skills/tree/main/skills/shipping-and-launch
+    dest: skills/external/shipping-and-launch/
+    description: Final checks and launch procedures before going live
+
+  # ─────────────────────────────────────────────────────────────────
+  # Skill generation (yusufkaraaslan/Skill_Seekers)
+  # Fallback: auto-generate skills from any documentation source
+  # ─────────────────────────────────────────────────────────────────
+
+  - name: skill-seekers
+    source: github
+    location: https://github.com/yusufkaraaslan/Skill_Seekers
+    dest: skills/external/skill-seekers/
+    description: Auto-generate SKILL.md files from docs, repos, PDFs, videos, and more
+
+  # ─────────────────────────────────────────────────────────────────
+  # Knowledge graph (safishamsi/graphify)
+  # Build queryable graphs from code, docs, and papers
+  # ─────────────────────────────────────────────────────────────────
+
+  - name: graphify
+    source: github
+    location: https://github.com/safishamsi/graphify
+    dest: skills/external/graphify/
+    description: Transform code and docs into an interactive knowledge graph
+
+  # ─────────────────────────────────────────────────────────────────
   # Weights & Biases
+  # ─────────────────────────────────────────────────────────────────
+
   - name: wandb-analysis
     source: url
     location: https://raw.githubusercontent.com/wandb/claude-skills/main/analysis/SKILL.md
     dest: skills/external/wandb-analysis/
     description: Analyze W&B runs, compare experiments, download results
 
-  # Placeholder for your own remote skills
+  # ─────────────────────────────────────────────────────────────────
+  # Add your own remote skills below
+  # ─────────────────────────────────────────────────────────────────
+
   # - name: my-remote-skill
   #   source: github
   #   location: https://github.com/{{OWNER}}/my-skills/tree/main/my-skill

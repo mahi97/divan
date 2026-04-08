@@ -6,6 +6,17 @@ experiment:
   seed: 42
   tags: []
 
+paths:
+  data_root: data/
+  dataset_dir: data/datasets/
+  results_root: results/
+  checkpoint_dir: results/checkpoints/
+  cache_root: .cache/
+  hf_home: .cache/huggingface/
+  hf_datasets_cache: .cache/huggingface/datasets/
+  hf_hub_cache: .cache/huggingface/hub/
+  transformers_cache: .cache/huggingface/transformers/
+
 model:
   type: mlp  # Replace with your model type
   hidden_size: 256
@@ -23,7 +34,7 @@ training:
 
 data:
   dataset: null     # Set to your dataset name
-  data_dir: data/
+  data_dir: data/datasets/
   num_workers: 4
 
 logging:
@@ -38,4 +49,7 @@ checkpointing:
 
 compute:
   server: local     # local | bare-gpu | hpc
-  gpus: 1
+  accelerator: cuda  # cuda | cpu | mps
+  gpu_devices: [0]   # Set to [] for CPU or scheduler-managed allocation
+  gpu_count: 1
+  gpu_type: null

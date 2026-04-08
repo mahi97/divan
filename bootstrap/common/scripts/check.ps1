@@ -6,7 +6,10 @@ $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Pa
 Set-Location $ProjectRoot
 
 Write-Host "=== Lint ===" -ForegroundColor Cyan
-if (Get-Command ruff -ErrorAction SilentlyContinue) {
+if (Get-Command uv -ErrorAction SilentlyContinue) {
+    uv run ruff check .
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+} elseif (Get-Command ruff -ErrorAction SilentlyContinue) {
     ruff check .
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } else {
@@ -15,7 +18,10 @@ if (Get-Command ruff -ErrorAction SilentlyContinue) {
 
 Write-Host ""
 Write-Host "=== Tests ===" -ForegroundColor Cyan
-if (Get-Command pytest -ErrorAction SilentlyContinue) {
+if (Get-Command uv -ErrorAction SilentlyContinue) {
+    uv run pytest
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+} elseif (Get-Command pytest -ErrorAction SilentlyContinue) {
     pytest
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } else {

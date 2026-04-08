@@ -16,9 +16,11 @@ cd {{PROJECT_NAME}}
 git clone https://github.com/{{OWNER}}/divan.git
 
 # Set up environment
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+uv sync --extra dev
+# For ML projects, also install profile extras:
+# uv sync --extra dev --extra ml
+# For LLM projects, also install profile extras:
+# uv sync --extra dev --extra ml --extra llm
 
 # Verify
 scripts/check.sh
@@ -32,7 +34,7 @@ How to run the main code.
 
 ```bash
 # Run an experiment
-python src/train.py --config configs/experiment_0001.yaml
+uv run python src/train.py --config configs/experiment_0001.yaml
 
 # Deploy to GPU server
 # See divan/skills/custom/gpu-deploy/ for instructions
@@ -56,6 +58,7 @@ See `docs/commands.md` for the complete command reference.
   src/               # Source code
   tests/             # Tests
   configs/           # Experiment configs
+  pyproject.toml     # Project metadata and tool config
   docs/              # Documentation
   scripts/           # Build/test/lint/deploy scripts
   data/              # Data (gitignored)

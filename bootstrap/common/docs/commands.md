@@ -5,16 +5,15 @@ All commands run from the project root.
 ## Setup
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate    # Linux/macOS
-.venv\Scripts\Activate.ps1   # Windows
-pip install -e ".[dev]"
+uv sync --extra dev
+# Add profile extras as needed, for example:
+uv sync --extra dev --extra ml
 ```
 
 ## Test
 
 ```bash
-pytest
+uv run pytest
 # or
 scripts/test.sh
 ```
@@ -22,7 +21,7 @@ scripts/test.sh
 ## Lint
 
 ```bash
-ruff check .
+uv run ruff check .
 # or
 scripts/lint.sh
 ```
@@ -30,7 +29,7 @@ scripts/lint.sh
 ## Format
 
 ```bash
-ruff format .
+uv run ruff format .
 ```
 
 ## Check All

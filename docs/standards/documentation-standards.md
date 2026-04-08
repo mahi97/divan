@@ -81,19 +81,19 @@ Keep it under 300 lines. Link to decision records for detailed rationale.
 
 ```markdown
 ## Setup
-pip install -e ".[dev]"
+uv sync --extra dev
 
 ## Run tests
-pytest
+uv run pytest
 
 ## Lint
-ruff check .
+uv run ruff check .
 
 ## Format
-ruff format .
+uv run ruff format .
 
 ## Build
-python -m build
+uv run python -m build
 ```
 
 No prose between commands. Group by task. Use headings as labels.

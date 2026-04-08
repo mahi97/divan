@@ -33,8 +33,8 @@ For existing repos, use retrofit mode (see TEMPLATE_USAGE.md).
 
 After initialization:
 
-1. Create a virtual environment: `python -m venv .venv`
-2. Install dependencies: `pip install -e ".[dev]"`
+1. Ensure `uv` is installed and `pyproject.toml` is present
+2. Sync dependencies: `uv sync --extra dev`
 3. Verify: `scripts/check.sh`
 4. Make first commit if this is a new repo.
 
@@ -42,7 +42,7 @@ After initialization:
 
 - Use feature branches for all work.
 - Follow coding standards (see coding-standards.md).
-- Write tests alongside features.
+- Follow test-driven development: start with a failing test or regression case.
 - Log experiments if this is a research project.
 - Make small, frequent commits.
 
