@@ -6,7 +6,7 @@
 
 ## Key Files
 
-- `divan` - The CLI script (bash). Subcommands: init, add, remove, list, profiles, status, sync, user-install, uninstall
+- `divan` - The CLI script (bash). Subcommands: init, add, remove, list, profiles, status, sync, user-install
 - `stack.yaml` - Master manifest. Every plugin with name, description, tags, required flag
 - `profiles/*.yaml` - Profile definitions. Each selects plugins by tags + explicit extras
 - `skills/`, `hooks/`, `agents/`, `commands/`, `workflows/` - Custom components
@@ -23,8 +23,6 @@
 ## Commands
 
 ```bash
-divan install                               # Install CLI + env vars to shell
-divan uninstall                             # Remove CLI, env vars, reset settings
 divan init --profile web --target ~/app     # Initialize project
 divan add ai-ml                             # Add by tag
 divan add telegram                          # Add by name
@@ -39,6 +37,7 @@ divan user-install --profile full           # User-level install
 ## Installation
 
 - `install.sh` — Remote installer for `curl | bash`. Clones to `~/.divan`, then runs `divan install`
+- `install.sh --uninstall` — Removes symlink, removes env block from all shell rcs, resets Claude settings
 - `divan install` — Symlinks CLI to `~/.local/bin`, reads `.env`, injects a managed block into shell rc files (`~/.bashrc`, `~/.zshrc`, `~/.profile`)
 - `divan uninstall` — Removes symlink, removes env block from all shell rcs, resets Claude settings
 - Env block is delimited by `# >>> divan >>>` / `# <<< divan <<<` markers for clean add/remove

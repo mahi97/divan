@@ -84,6 +84,18 @@ plugin_desc() {
   ' "${DIVAN_ROOT}/stack.yaml"
 }
 
+# Get marketplace for a plugin (defaults to MARKETPLACE if not specified)
+plugin_marketplace() {
+  local name="$1"
+  local mkt
+  mkt=$(awk -v name="$name" '
+    /^  - name:/ { found = ($NF == name) }
+    found && /marketplace:/ { gsub(/.*marketplace:\s*/, ""); gsub(/^["'\''"]/, ""); gsub(/["'\''"]$/, ""); print; found=0 }
+    found && /^  - name:/ { found=0 }
+  ' "${DIVAN_ROOT}/stack.yaml" | tr -d '"' | tr -d "'" | head -1)
+  echo "${mkt:-$MARKETPLACE}"
+}
+
 # ─── Profile helpers ──────────────────────────────────────────────────────────
 
 # List all profile names
@@ -176,8 +188,10 @@ build_settings_json() {
   local plugins_json="{"
   local first=true
   for p in "${plugins[@]}"; do
+    local mkt
+    mkt=$(plugin_marketplace "$p")
     $first && first=false || plugins_json+=","
-    plugins_json+="\"${p}@${MARKETPLACE}\":true"
+    plugins_json+="\"${p}@${mkt}\":true"
   done
   plugins_json+="}"
 
@@ -436,8 +450,20 @@ cmd_init() {
   if command -v claude &>/dev/null; then
     echo ""
     log_info "Installing plugins via Claude Code CLI..."
+
+    # Ensure extra marketplaces are registered
+    while IFS= read -r mkt_source; do
+      [[ -z "$mkt_source" ]] && continue
+      mkt_source=$(echo "$mkt_source" | tr -d '"' | tr -d "'")
+      if ! claude plugins marketplace list 2>/dev/null | grep -q "$mkt_source"; then
+        claude plugins marketplace add "$mkt_source" 2>/dev/null && log_ok "Added marketplace: ${mkt_source}" || true
+      fi
+    done < <(awk '/^extra_marketplaces:/,/^[a-z]/' "${DIVAN_ROOT}/stack.yaml" | grep 'source:' | awk '{print $2}')
+
     for p in "${selected_plugins[@]}"; do
-      claude plugins install "$p" 2>/dev/null && log_ok "Installed ${p}" || log_warn "Could not install ${p} (will install on next launch)"
+      local mkt
+      mkt=$(plugin_marketplace "$p")
+      claude plugins install "${p}@${mkt}" 2>/dev/null && log_ok "Installed ${p}" || log_warn "Could not install ${p} (will install on next launch)"
     done
   fi
 
@@ -497,14 +523,17 @@ cmd_add() {
     # Add to project settings
     if [[ -f ".claude/settings.json" ]]; then
       local tmp
-      tmp=$(jq --arg p "${p}@${MARKETPLACE}" '.enabledPlugins[$p] = true' ".claude/settings.json")
+      local mkt
+      mkt=$(plugin_marketplace "$p")
+      tmp=$(jq --arg p "${p}@${mkt}" '.enabledPlugins[$p] = true' ".claude/settings.json")
       echo "$tmp" > ".claude/settings.json"
     fi
 
     # Add to user settings
     if [[ -f "$SETTINGS_FILE" ]]; then
-      local tmp
-      tmp=$(jq --arg p "${p}@${MARKETPLACE}" '.enabledPlugins[$p] = true' "$SETTINGS_FILE")
+      local tmp mkt
+      mkt=$(plugin_marketplace "$p")
+      tmp=$(jq --arg p "${p}@${mkt}" '.enabledPlugins[$p] = true' "$SETTINGS_FILE")
       echo "$tmp" > "$SETTINGS_FILE"
     fi
 
@@ -539,7 +568,9 @@ cmd_remove() {
   # Remove from project settings
   if [[ -f ".claude/settings.json" ]]; then
     local tmp
-    tmp=$(jq --arg p "${what}@${MARKETPLACE}" 'del(.enabledPlugins[$p])' ".claude/settings.json")
+    local mkt
+    mkt=$(plugin_marketplace "$what")
+    tmp=$(jq --arg p "${what}@${mkt}" 'del(.enabledPlugins[$p])' ".claude/settings.json")
     echo "$tmp" > ".claude/settings.json"
   fi
 
@@ -746,9 +777,20 @@ cmd_user_install() {
   log_ok "Updated ~/.claude/settings.json"
 
   if command -v claude &>/dev/null; then
+    # Ensure extra marketplaces are registered
+    while IFS= read -r mkt_source; do
+      [[ -z "$mkt_source" ]] && continue
+      mkt_source=$(echo "$mkt_source" | tr -d '"' | tr -d "'")
+      if ! claude plugins marketplace list 2>/dev/null | grep -q "$mkt_source"; then
+        claude plugins marketplace add "$mkt_source" 2>/dev/null && log_ok "Added marketplace: ${mkt_source}" || true
+      fi
+    done < <(awk '/^extra_marketplaces:/,/^[a-z]/' "${DIVAN_ROOT}/stack.yaml" | grep 'source:' | awk '{print $2}')
+
     log_info "Installing plugins via CLI..."
     for p in "${plugins[@]}"; do
-      claude plugins install "$p" 2>/dev/null && log_ok "${p}" || log_warn "${p} (deferred)"
+      local mkt
+      mkt=$(plugin_marketplace "$p")
+      claude plugins install "${p}@${mkt}" 2>/dev/null && log_ok "${p}" || log_warn "${p} (deferred)"
     done
   else
     log_warn "Claude CLI not found — plugins will install on next launch."
@@ -790,8 +832,8 @@ build_env_block() {
 
   echo "$DIVAN_MARKER_BEGIN"
   echo "# Managed by divan — do not edit this block manually."
-  echo "# To update: edit ${divan_home}/.env and run 'divan install'"
-  echo "# To remove: run 'divan uninstall'"
+  echo "# To update: edit ${divan_home}/.env and re-run install.sh"
+  echo "# To remove: delete this block or re-run install.sh"
   echo "export PATH=\"${install_dir}:\$PATH\""
   echo "export DIVAN_HOME=\"${divan_home}\""
 
@@ -837,11 +879,11 @@ inject_env_block() {
   } >> "$rc_file"
 }
 
-# ─── divan install ───────────────────────────────────────────────────────────
+# ─── install/uninstall (called by install.sh, not exposed as CLI subcommands) ─
 
-cmd_install() {
-  local install_dir="${HOME}/.local/bin"
-  local divan_home="${HOME}/.divan"
+_do_install() {
+  local install_dir="${BIN_DIR:-${HOME}/.local/bin}"
+  local divan_home="${DIVAN_HOME:-${HOME}/.divan}"
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -915,10 +957,8 @@ cmd_install() {
   echo ""
 }
 
-# ─── divan uninstall ──────────────────────────────────────────────────────────
-
-cmd_uninstall() {
-  local install_dir="${HOME}/.local/bin"
+_do_uninstall() {
+  local install_dir="${BIN_DIR:-${HOME}/.local/bin}"
 
   echo ""
   log_info "Uninstalling divan..."
@@ -974,8 +1014,6 @@ usage() {
   echo "Usage: divan <command> [options]"
   echo ""
   echo "Commands:"
-  echo "  install           Install CLI + env vars to shell (~/.local/bin)"
-  echo "  uninstall         Remove CLI, env vars, and reset Claude settings"
   echo "  init              Initialize a project with a profile"
   echo "  add <plugin|tag>  Add plugins to current project"
   echo "  remove <plugin>   Remove a plugin from current project"
@@ -986,7 +1024,6 @@ usage() {
   echo "  user-install      Install plugins at user level (~/.claude/)"
   echo ""
   echo "Examples:"
-  echo "  divan install                                 # install CLI globally"
   echo "  divan init --profile web                      # init a web project"
   echo "  divan init --profile ml --target ~/research   # init elsewhere"
   echo "  divan add frontend-design                     # add a plugin"
@@ -1002,8 +1039,8 @@ usage() {
 CMD="$1"; shift
 
 case "$CMD" in
-  install)         cmd_install "$@" ;;
-  uninstall)       cmd_uninstall ;;
+  _install)        _do_install "$@" ;;
+  _uninstall)      _do_uninstall ;;
   init)            cmd_init "$@" ;;
   add)             [[ $# -ge 1 ]] || { log_err "Usage: divan add <plugin|tag>"; exit 1; }; cmd_add "$@" ;;
   remove|rm)       [[ $# -ge 1 ]] || { log_err "Usage: divan remove <plugin>"; exit 1; }; cmd_remove "$@" ;;

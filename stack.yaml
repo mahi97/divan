@@ -13,9 +13,20 @@ description: "Curated Claude Code super collection"
 author: Mahi97
 marketplace: claude-plugins-official
 
+# Additional marketplaces (for non-official plugins)
+extra_marketplaces:
+  - name: claude-skill-manager-marketplace
+    source: "https://github.com/mahi97/claude-skill-manager"
+
 # ─── Plugins ──────────────────────────────────────────────────────────────────
 plugins:
   # ── Core (always included) ──
+  - name: claude-skill-manager
+    description: "Persistent skill/plugin lifecycle manager — scouts, evaluates, proposes, and manages your ecosystem"
+    tags: [core, workflow, automation]
+    required: true
+    marketplace: claude-skill-manager-marketplace
+
   - name: superpowers
     description: "Brainstorming, planning, TDD, debugging, parallel agents, code review"
     tags: [core, workflow]

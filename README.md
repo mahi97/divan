@@ -18,17 +18,13 @@ This clones to `~/.divan`, links the CLI to `~/.local/bin/divan`, writes env var
 
 ```bash
 git clone https://github.com/mahi97/divan.git ~/.divan
-cd ~/.divan && ./divan install
+~/.divan/install.sh
 ```
 
 **Customize install location:**
 
 ```bash
-# Change where divan lives and where the binary goes
 DIVAN_HOME=~/my-tools/divan BIN_DIR=~/bin curl -fsSL https://raw.githubusercontent.com/mahi97/divan/main/install.sh | bash
-
-# Or after cloning
-./divan install --bin-dir ~/bin
 ```
 
 ## Quick Start
@@ -48,8 +44,6 @@ divan list --profile ml
 ## The `divan` CLI
 
 ```bash
-divan install                                    # install CLI + env vars to shell
-divan uninstall                                  # remove CLI, env vars, reset settings
 divan init [--profile <name>] [--target <dir>]   # initialize a project
 divan add <plugin|tag>                           # add a component
 divan remove <plugin>                            # remove a component
@@ -214,7 +208,7 @@ cd ~/my-app && divan sync
 
 ## Environment Variables
 
-Divan manages a `.env` file that gets exported into your shell on `divan install`.
+Divan manages a `.env` file that gets exported into your shell when you run `install.sh`.
 
 ```bash
 # Edit ~/.divan/.env (or ./env if running from a clone)
@@ -238,7 +232,7 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=...
 ```
 
-On `divan install`, these get written into a managed block in `~/.bashrc`, `~/.zshrc`, and `~/.profile` (whichever exist):
+On install, these get written into a managed block in `~/.bashrc`, `~/.zshrc`, and `~/.profile` (whichever exist):
 
 ```bash
 # >>> divan >>>
@@ -250,12 +244,14 @@ export HF_TOKEN=hf_...
 # <<< divan <<<
 ```
 
-Re-run `divan install` after editing `.env` to update your shell configs. `divan uninstall` cleanly removes the block.
+Re-run `install.sh` after editing `.env` to update your shell configs.
 
 ## Uninstalling
 
 ```bash
-divan uninstall
+~/.divan/install.sh --uninstall
+# or if divan is still on PATH:
+# just delete the block from your shell rc files and rm the symlink
 ```
 
 This removes the CLI symlink, cleans the env block from all shell configs, and resets Claude Code settings. The divan repo itself is kept -- remove it with `rm -rf ~/.divan` if desired.

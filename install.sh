@@ -2,12 +2,21 @@
 set -euo pipefail
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Divan remote installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/mahi97/divan/main/install.sh | bash
+# Divan installer / uninstaller
+#
+# Install:    curl -fsSL https://raw.githubusercontent.com/mahi97/divan/main/install.sh | bash
+# Uninstall:  ~/.divan/install.sh --uninstall
 # ═══════════════════════════════════════════════════════════════════════════════
 
 DIVAN_HOME="${DIVAN_HOME:-${HOME}/.divan}"
 BIN_DIR="${BIN_DIR:-${HOME}/.local/bin}"
+UNINSTALL=false
+
+for arg in "$@"; do
+  case "$arg" in
+    --uninstall) UNINSTALL=true ;;
+  esac
+done
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
@@ -26,6 +35,16 @@ for cmd in git jq; do
   fi
 done
 
+if $UNINSTALL; then
+  # Uninstall: find the divan script and run its internal _uninstall
+  if [[ -f "${DIVAN_HOME}/divan" ]]; then
+    exec "${DIVAN_HOME}/divan" _uninstall
+  else
+    echo -e "${YELLOW} !${NC} Divan not found at ${DIVAN_HOME}. Nothing to uninstall."
+    exit 0
+  fi
+fi
+
 # Clone or update
 if [[ -d "$DIVAN_HOME" ]]; then
   echo -e "${BLUE}>>>${NC} Updating existing install at ${DIVAN_HOME}..."
@@ -39,5 +58,5 @@ else
   git clone --depth 1 https://github.com/mahi97/divan.git "$DIVAN_HOME"
 fi
 
-# Run divan install from the clone
-exec "${DIVAN_HOME}/divan" install --bin-dir "$BIN_DIR" --divan-home "$DIVAN_HOME"
+# Run internal install from the clone
+exec "${DIVAN_HOME}/divan" _install --bin-dir "$BIN_DIR" --divan-home "$DIVAN_HOME"

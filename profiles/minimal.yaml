@@ -12,5 +12,6 @@ settings:
 claude_md:
   append: |
     ## Divan Profile: minimal
-    Core plugins only: superpowers, github, commit-commands, context7, ralph-loop, remember.
+    Core plugins only: superpowers, github, commit-commands, context7, ralph-loop, remember, claude-skill-manager.
+    CSM runs as a persistent daemon managing your skill/plugin ecosystem. Start with `csm start`.
     Run `divan add <plugin>` to add more as needed.
