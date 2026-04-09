@@ -12,13 +12,13 @@ Divan (Persian: a collected works) bundles 24 official marketplace plugins, 6 MC
 curl -fsSL https://raw.githubusercontent.com/mahi97/divan/main/install.sh | bash
 ```
 
-This clones to `~/.divan`, links the CLI to `~/.local/bin/divan`, and you're done.
+This clones to `~/.divan`, links the CLI to `~/.local/bin/divan`, writes env vars to your shell configs, and you're done.
 
 **Or clone and install manually:**
 
 ```bash
 git clone https://github.com/mahi97/divan.git ~/.divan
-cd ~/.divan && ./divan self-install
+cd ~/.divan && ./divan install
 ```
 
 **Customize install location:**
@@ -28,7 +28,7 @@ cd ~/.divan && ./divan self-install
 DIVAN_HOME=~/my-tools/divan BIN_DIR=~/bin curl -fsSL https://raw.githubusercontent.com/mahi97/divan/main/install.sh | bash
 
 # Or after cloning
-./divan self-install --bin-dir ~/bin --divan-home ~/my-tools/divan
+./divan install --bin-dir ~/bin
 ```
 
 ## Quick Start
@@ -48,17 +48,16 @@ divan list --profile ml
 ## The `divan` CLI
 
 ```bash
-divan self-install                               # install CLI to PATH
+divan install                                    # install CLI + env vars to shell
+divan uninstall                                  # remove CLI, env vars, reset settings
 divan init [--profile <name>] [--target <dir>]   # initialize a project
-divan add <plugin|tag>                            # add a component
-divan remove <plugin>                             # remove a component
-divan list [--profile <name>]                     # browse the collection
-divan profiles                                    # list all profiles
-divan status                                      # show current project config
-divan sync                                        # re-sync from profile
-divan user-install [--profile <name>]             # install at user level
-divan uninstall                                   # reset Claude Code settings
-divan self-uninstall                              # remove divan from PATH
+divan add <plugin|tag>                           # add a component
+divan remove <plugin>                            # remove a component
+divan list [--profile <name>]                    # browse the collection
+divan profiles                                   # list all profiles
+divan status                                     # show current project config
+divan sync                                       # re-sync from profile
+divan user-install [--profile <name>]            # install plugins at user level
 ```
 
 ## Profiles
@@ -213,20 +212,55 @@ cd ~/.divan && git pull
 cd ~/my-app && divan sync
 ```
 
+## Environment Variables
+
+Divan manages a `.env` file that gets exported into your shell on `divan install`.
+
+```bash
+# Edit ~/.divan/.env (or ./env if running from a clone)
+vim ~/.divan/.env
+```
+
+Example `.env`:
+
+```bash
+# API keys
+ANTHROPIC_API_KEY=sk-ant-...
+HF_TOKEN=hf_...
+OPENAI_API_KEY=sk-...
+
+# Platform tokens
+VERCEL_TOKEN=...
+TELEGRAM_BOT_TOKEN=...
+
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=...
+```
+
+On `divan install`, these get written into a managed block in `~/.bashrc`, `~/.zshrc`, and `~/.profile` (whichever exist):
+
+```bash
+# >>> divan >>>
+# Managed by divan — do not edit this block manually.
+export PATH="/home/user/.local/bin:$PATH"
+export DIVAN_HOME="/home/user/.divan"
+export ANTHROPIC_API_KEY=sk-ant-...
+export HF_TOKEN=hf_...
+# <<< divan <<<
+```
+
+Re-run `divan install` after editing `.env` to update your shell configs. `divan uninstall` cleanly removes the block.
+
 ## Uninstalling
 
 ```bash
-# Reset Claude Code settings (disables all plugins)
 divan uninstall
-
-# Remove divan CLI from PATH
-divan self-uninstall
-
-# Fully remove (optional)
-rm -rf ~/.divan
 ```
 
-A backup is created automatically before any settings changes.
+This removes the CLI symlink, cleans the env block from all shell configs, and resets Claude Code settings. The divan repo itself is kept -- remove it with `rm -rf ~/.divan` if desired.
+
+A backup of settings is created automatically before changes.
 
 ## License
 

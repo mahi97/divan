@@ -23,7 +23,8 @@
 ## Commands
 
 ```bash
-divan self-install                          # Install CLI to ~/.local/bin
+divan install                               # Install CLI + env vars to shell
+divan uninstall                             # Remove CLI, env vars, reset settings
 divan init --profile web --target ~/app     # Initialize project
 divan add ai-ml                             # Add by tag
 divan add telegram                          # Add by name
@@ -33,14 +34,24 @@ divan profiles                              # List all profiles
 divan status                                # Current project info
 divan sync                                  # Re-sync from profile
 divan user-install --profile full           # User-level install
-divan self-uninstall                        # Remove CLI from PATH
 ```
 
 ## Installation
 
-- `install.sh` — Remote installer for `curl | bash`. Clones to `~/.divan`, links to `~/.local/bin/divan`
-- `divan self-install` — Same but from a local clone. Detects if running from git repo
-- `DIVAN_HOME` and `BIN_DIR` env vars override defaults
+- `install.sh` — Remote installer for `curl | bash`. Clones to `~/.divan`, then runs `divan install`
+- `divan install` — Symlinks CLI to `~/.local/bin`, reads `.env`, injects a managed block into shell rc files (`~/.bashrc`, `~/.zshrc`, `~/.profile`)
+- `divan uninstall` — Removes symlink, removes env block from all shell rcs, resets Claude settings
+- Env block is delimited by `# >>> divan >>>` / `# <<< divan <<<` markers for clean add/remove
+- `DIVAN_HOME` and `BIN_DIR` env vars or `--bin-dir`/`--divan-home` flags override defaults
+
+## .env File
+
+- `.env` in the divan repo root defines environment variables to export
+- Lines starting with `#` and blank lines are skipped
+- Lines with empty values are skipped
+- `DIVAN_HOME` is always set automatically (don't duplicate in `.env`)
+- Re-run `divan install` after editing `.env` to update shell configs
+- `.env` is tracked in git (template with commented-out keys); use `.env.local` for secrets (gitignored)
 
 ## Conventions
 

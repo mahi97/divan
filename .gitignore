@@ -9,8 +9,7 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Environment
-.env
+# Environment (secrets only — .env is tracked as a template)
 .env.local
 *.credentials*
 

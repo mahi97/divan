@@ -236,7 +236,7 @@ cmd_init() {
       count=$(resolve_plugins "$p" | wc -l)
       printf "  ${BOLD}%2d)${NC} ${CYAN}[%s]${NC} %-12s  %s ${DIM}(%d plugins)${NC}\n" "$i" "$icon" "$p" "$desc" "$count"
       profile_list+=("$p")
-      ((i++))
+      i=$((i + 1))
     done
 
     echo ""
@@ -270,7 +270,7 @@ cmd_init() {
       printf "  ${BOLD}%2d)${NC} %-22s ${DIM}[%s]${NC}%b\n" "$i" "$name" "$tags_str" "$req"
       log_dim "     $desc"
       all_names+=("$name")
-      ((i++))
+      i=$((i + 1))
     done < <(all_plugin_names)
 
     echo ""
@@ -394,7 +394,7 @@ cmd_init() {
       [[ -f "$skill_file" ]] || continue
       [[ "$(basename "$skill_file")" == "README.md" ]] && continue
       cp "$skill_file" "${target}/.claude/skills/"
-      ((skills_copied++))
+      skills_copied=$((skills_copied + 1))
     done
     [[ $skills_copied -gt 0 ]] && log_ok "Copied ${skills_copied} custom skills"
   fi
@@ -406,14 +406,14 @@ cmd_init() {
     for hook_file in "${DIVAN_ROOT}/hooks/"*.yaml; do
       [[ -f "$hook_file" ]] || continue
       cp "$hook_file" "${target}/.claude/hooks/"
-      ((hooks_copied++))
+      hooks_copied=$((hooks_copied + 1))
     done
     if [[ -d "${DIVAN_ROOT}/hooks/scripts" ]]; then
       mkdir -p "${target}/.claude/hooks/scripts"
       for script in "${DIVAN_ROOT}/hooks/scripts/"*; do
         [[ -f "$script" ]] && [[ "$(basename "$script")" != ".gitkeep" ]] || continue
         cp "$script" "${target}/.claude/hooks/scripts/"
-        ((hooks_copied++))
+        hooks_copied=$((hooks_copied + 1))
       done
     fi
     [[ $hooks_copied -gt 0 ]] && log_ok "Copied ${hooks_copied} custom hooks"
@@ -427,7 +427,7 @@ cmd_init() {
       [[ -f "$cmd_file" ]] || continue
       [[ "$(basename "$cmd_file")" == "README.md" ]] && continue
       cp "$cmd_file" "${target}/.claude/commands/"
-      ((cmds_copied++))
+      cmds_copied=$((cmds_copied + 1))
     done
     [[ $cmds_copied -gt 0 ]] && log_ok "Copied ${cmds_copied} custom commands"
   fi
@@ -509,7 +509,7 @@ cmd_add() {
     fi
 
     log_ok "Added ${p}"
-    ((added++))
+    added=$((added + 1))
   done
 
   [[ $added -eq 0 ]] && log_dim "Nothing new to add."
@@ -667,7 +667,7 @@ cmd_status() {
     if ! $found; then
       [[ $missing -eq 0 ]] && echo -e "  ${BOLD}Available to add:${NC}"
       echo -e "    ${DIM}- ${name}${NC}"
-      ((missing++))
+      missing=$((missing + 1))
     fi
   done < <(all_plugin_names)
 
@@ -759,9 +759,87 @@ cmd_user_install() {
   echo ""
 }
 
-# ─── divan self-install ───────────────────────────────────────────────────────
+# ─── Shell RC helpers ─────────────────────────────────────────────────────────
 
-cmd_self_install() {
+DIVAN_MARKER_BEGIN="# >>> divan >>>"
+DIVAN_MARKER_END="# <<< divan <<<"
+
+# Detect all shell rc files that exist or should be written to
+detect_shell_rcs() {
+  local -a rcs=()
+  # Always write to files that exist
+  [[ -f "${HOME}/.bashrc" ]]  && rcs+=("${HOME}/.bashrc")
+  [[ -f "${HOME}/.zshrc" ]]   && rcs+=("${HOME}/.zshrc")
+  [[ -f "${HOME}/.profile" ]] && rcs+=("${HOME}/.profile")
+
+  # If none found, create for the current shell
+  if [[ ${#rcs[@]} -eq 0 ]]; then
+    case "${SHELL:-}" in
+      */zsh)  rcs+=("${HOME}/.zshrc") ;;
+      */bash) rcs+=("${HOME}/.bashrc") ;;
+      *)      rcs+=("${HOME}/.profile") ;;
+    esac
+  fi
+  printf '%s\n' "${rcs[@]}"
+}
+
+# Build the block that gets injected into shell rc files
+build_env_block() {
+  local divan_home="$1" install_dir="$2"
+  local env_file="${divan_home}/.env"
+
+  echo "$DIVAN_MARKER_BEGIN"
+  echo "# Managed by divan — do not edit this block manually."
+  echo "# To update: edit ${divan_home}/.env and run 'divan install'"
+  echo "# To remove: run 'divan uninstall'"
+  echo "export PATH=\"${install_dir}:\$PATH\""
+  echo "export DIVAN_HOME=\"${divan_home}\""
+
+  # Parse .env: skip comments, blank lines; export each KEY=VALUE
+  if [[ -f "$env_file" ]]; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      # Skip comments and blank lines
+      [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+      # Skip lines where value is empty placeholder
+      local val="${line#*=}"
+      [[ -z "$val" ]] && continue
+      # Skip the DIVAN_HOME line from .env (we already set it above)
+      [[ "$line" =~ ^DIVAN_HOME= ]] && continue
+      echo "export ${line}"
+    done < "$env_file"
+  fi
+
+  echo "$DIVAN_MARKER_END"
+}
+
+# Remove the divan block from a shell rc file
+remove_env_block() {
+  local rc_file="$1"
+  if [[ -f "$rc_file" ]] && grep -qF "$DIVAN_MARKER_BEGIN" "$rc_file"; then
+    # Remove everything between markers (inclusive)
+    sed -i "/${DIVAN_MARKER_BEGIN//\//\\/}/,/${DIVAN_MARKER_END//\//\\/}/d" "$rc_file"
+    return 0
+  fi
+  return 1
+}
+
+# Inject the divan block into a shell rc file (replaces existing block if present)
+inject_env_block() {
+  local rc_file="$1" block="$2"
+
+  # Remove old block first
+  remove_env_block "$rc_file" 2>/dev/null || true
+
+  # Append new block
+  {
+    echo ""
+    echo "$block"
+  } >> "$rc_file"
+}
+
+# ─── divan install ───────────────────────────────────────────────────────────
+
+cmd_install() {
   local install_dir="${HOME}/.local/bin"
   local divan_home="${HOME}/.divan"
 
@@ -774,95 +852,109 @@ cmd_self_install() {
   done
 
   echo ""
-  log_info "Installing divan CLI..."
+  log_info "Installing divan..."
 
-  # If running from a git clone, use that as DIVAN_HOME
+  # 1. Resolve divan home
   if [[ -d "${DIVAN_ROOT}/.git" ]]; then
     divan_home="$DIVAN_ROOT"
     log_dim "Using existing clone at ${divan_home}"
   else
-    # Running from curl pipe — need to clone
     if [[ ! -d "$divan_home" ]]; then
       need_cmd git
       log_info "Cloning divan to ${divan_home}..."
       git clone --depth 1 https://github.com/mahi97/divan.git "$divan_home"
     else
-      log_dim "Divan repo already at ${divan_home}"
+      log_dim "Divan repo at ${divan_home}"
       log_info "Pulling latest..."
       git -C "$divan_home" pull --ff-only 2>/dev/null || true
     fi
   fi
 
-  # Ensure bin directory exists and is on PATH
+  # 2. Symlink CLI
   mkdir -p "$install_dir"
-
-  # Create symlink
   ln -sf "${divan_home}/divan" "${install_dir}/divan"
   log_ok "Linked divan → ${install_dir}/divan"
 
-  # Check if install_dir is on PATH
-  if ! echo "$PATH" | tr ':' '\n' | grep -qx "$install_dir"; then
-    log_warn "${install_dir} is not on your PATH."
-    echo ""
-    echo "  Add it by appending one of these to your shell config:"
-    echo ""
+  # 3. Build env block from .env
+  local block
+  block=$(build_env_block "$divan_home" "$install_dir")
 
-    # Detect shell
-    local shell_rc=""
-    case "${SHELL:-}" in
-      */zsh)  shell_rc="~/.zshrc" ;;
-      */bash) shell_rc="~/.bashrc" ;;
-      *)      shell_rc="your shell config" ;;
-    esac
+  # 4. Inject into all detected shell rc files
+  local injected=0
+  while IFS= read -r rc; do
+    inject_env_block "$rc" "$block"
+    log_ok "Wrote env to $(basename "$rc")"
+    injected=$((injected + 1))
+  done < <(detect_shell_rcs)
 
-    echo -e "    ${BOLD}echo 'export PATH=\"${install_dir}:\$PATH\"' >> ${shell_rc}${NC}"
-    echo ""
-    echo "  Then restart your shell or run:"
-    echo ""
-    echo -e "    ${BOLD}source ${shell_rc}${NC}"
-    echo ""
-  else
-    log_ok "${install_dir} is already on PATH"
-  fi
-
-  # Verify
-  if command -v divan &>/dev/null; then
-    echo ""
-    echo -e "${GREEN}${BOLD}divan is ready!${NC} Run ${BOLD}divan${NC} from anywhere."
-  else
-    echo ""
-    echo -e "${GREEN}${BOLD}divan installed!${NC} Restart your shell, then run ${BOLD}divan${NC} from anywhere."
-  fi
+  # 5. Show what was injected
   echo ""
-}
+  log_info "Environment block injected:"
+  echo -e "${DIM}"
+  echo "$block" | sed 's/^/    /'
+  echo -e "${NC}"
 
-# ─── divan self-uninstall ────────────────────────────────────────────────────
-
-cmd_self_uninstall() {
-  local install_dir="${HOME}/.local/bin"
-  local link="${install_dir}/divan"
-
-  if [[ -L "$link" ]]; then
-    rm "$link"
-    log_ok "Removed ${link}"
-  elif [[ -f "$link" ]]; then
-    rm "$link"
-    log_ok "Removed ${link}"
-  else
-    log_warn "No divan found in ${install_dir}"
+  # 6. Summary
+  local env_file="${divan_home}/.env"
+  local env_count=0
+  if [[ -f "$env_file" ]]; then
+    env_count=$(grep -cE '^[^#[:space:]]' "$env_file" 2>/dev/null || echo 0)
   fi
 
-  log_dim "Divan repo at ${DIVAN_ROOT} was not removed."
-  log_dim "To fully remove: rm -rf ${DIVAN_ROOT}"
+  echo -e "${GREEN}${BOLD}divan installed!${NC}"
+  echo ""
+  echo -e "  ${DIM}CLI:       ${install_dir}/divan${NC}"
+  echo -e "  ${DIM}Env vars:  ${env_count} from .env${NC}"
+  echo -e "  ${DIM}Shell RCs: ${injected} file(s) updated${NC}"
+  echo ""
+  echo "  Restart your shell or run:"
+  echo ""
+  while IFS= read -r rc; do
+    echo -e "    ${BOLD}source ${rc}${NC}"
+  done < <(detect_shell_rcs)
+  echo ""
 }
 
 # ─── divan uninstall ──────────────────────────────────────────────────────────
 
 cmd_uninstall() {
-  backup_if_exists "$SETTINGS_FILE"
-  jq -n '{model: "opus[1m]", enabledPlugins: {}}' > "$SETTINGS_FILE"
-  log_ok "Settings reset. Plugins disabled but cached."
-  log_dim "Run 'divan user-install' to restore."
+  local install_dir="${HOME}/.local/bin"
+
+  echo ""
+  log_info "Uninstalling divan..."
+
+  # 1. Remove symlink
+  local link="${install_dir}/divan"
+  if [[ -L "$link" ]] || [[ -f "$link" ]]; then
+    rm "$link"
+    log_ok "Removed ${link}"
+  else
+    log_dim "No symlink at ${link}"
+  fi
+
+  # 2. Remove env block from all shell rc files
+  local removed=0
+  for rc in "${HOME}/.bashrc" "${HOME}/.zshrc" "${HOME}/.profile"; do
+    if remove_env_block "$rc" 2>/dev/null; then
+      log_ok "Cleaned env from $(basename "$rc")"
+      removed=$((removed + 1))
+    fi
+  done
+  [[ $removed -eq 0 ]] && log_dim "No env blocks found in shell configs"
+
+  # 3. Reset Claude Code settings
+  if [[ -f "$SETTINGS_FILE" ]]; then
+    backup_if_exists "$SETTINGS_FILE"
+    jq -n '{model: "opus[1m]", enabledPlugins: {}}' > "$SETTINGS_FILE"
+    log_ok "Reset ~/.claude/settings.json (plugins disabled, cached)"
+  fi
+
+  echo ""
+  echo -e "${GREEN}${BOLD}divan uninstalled.${NC}"
+  echo -e "  ${DIM}Divan repo at ${DIVAN_ROOT} was not removed.${NC}"
+  echo -e "  ${DIM}To fully remove: rm -rf ${DIVAN_ROOT}${NC}"
+  echo -e "  ${DIM}Restart your shell to clear env vars from this session.${NC}"
+  echo ""
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -882,7 +974,8 @@ usage() {
   echo "Usage: divan <command> [options]"
   echo ""
   echo "Commands:"
-  echo "  self-install      Install divan CLI to PATH (~/.local/bin)"
+  echo "  install           Install CLI + env vars to shell (~/.local/bin)"
+  echo "  uninstall         Remove CLI, env vars, and reset Claude settings"
   echo "  init              Initialize a project with a profile"
   echo "  add <plugin|tag>  Add plugins to current project"
   echo "  remove <plugin>   Remove a plugin from current project"
@@ -890,12 +983,10 @@ usage() {
   echo "  profiles          List available profiles"
   echo "  status            Show current project's config"
   echo "  sync              Re-sync project from its profile"
-  echo "  user-install      Install at user level (~/.claude/)"
-  echo "  uninstall         Reset user-level Claude Code settings"
-  echo "  self-uninstall    Remove divan CLI from PATH"
+  echo "  user-install      Install plugins at user level (~/.claude/)"
   echo ""
   echo "Examples:"
-  echo "  divan self-install                            # install CLI globally"
+  echo "  divan install                                 # install CLI globally"
   echo "  divan init --profile web                      # init a web project"
   echo "  divan init --profile ml --target ~/research   # init elsewhere"
   echo "  divan add frontend-design                     # add a plugin"
@@ -911,8 +1002,8 @@ usage() {
 CMD="$1"; shift
 
 case "$CMD" in
-  self-install)    cmd_self_install "$@" ;;
-  self-uninstall)  cmd_self_uninstall ;;
+  install)         cmd_install "$@" ;;
+  uninstall)       cmd_uninstall ;;
   init)            cmd_init "$@" ;;
   add)             [[ $# -ge 1 ]] || { log_err "Usage: divan add <plugin|tag>"; exit 1; }; cmd_add "$@" ;;
   remove|rm)       [[ $# -ge 1 ]] || { log_err "Usage: divan remove <plugin>"; exit 1; }; cmd_remove "$@" ;;
@@ -921,7 +1012,6 @@ case "$CMD" in
   status|st)       cmd_status ;;
   sync)            cmd_sync ;;
   user-install)    cmd_user_install "$@" ;;
-  uninstall)       cmd_uninstall ;;
   help|-h|--help)  usage ;;
   *)               log_err "Unknown command: $CMD"; usage; exit 1 ;;
 esac

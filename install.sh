@@ -39,44 +39,5 @@ else
   git clone --depth 1 https://github.com/mahi97/divan.git "$DIVAN_HOME"
 fi
 
-# Symlink
-mkdir -p "$BIN_DIR"
-ln -sf "${DIVAN_HOME}/divan" "${BIN_DIR}/divan"
-echo -e "${GREEN} +${NC} Linked divan → ${BIN_DIR}/divan"
-
-# PATH check
-if echo "$PATH" | tr ':' '\n' | grep -qx "$BIN_DIR"; then
-  echo -e "${GREEN} +${NC} ${BIN_DIR} is on PATH"
-  echo ""
-  echo -e "${GREEN}${BOLD}Done!${NC} Run ${BOLD}divan${NC} to get started."
-else
-  echo -e "${YELLOW} !${NC} ${BIN_DIR} is not on your PATH"
-  echo ""
-
-  shell_rc=""
-  case "${SHELL:-}" in
-    */zsh)  shell_rc="~/.zshrc" ;;
-    */bash) shell_rc="~/.bashrc" ;;
-    */fish) shell_rc="~/.config/fish/config.fish" ;;
-    *)      shell_rc="your shell config" ;;
-  esac
-
-  echo "  Add to PATH by running:"
-  echo ""
-  if [[ "${SHELL:-}" == */fish ]]; then
-    echo -e "    ${BOLD}fish_add_path ${BIN_DIR}${NC}"
-  else
-    echo -e "    ${BOLD}echo 'export PATH=\"${BIN_DIR}:\$PATH\"' >> ${shell_rc}${NC}"
-  fi
-  echo ""
-  echo -e "  Then restart your shell or run: ${BOLD}source ${shell_rc}${NC}"
-  echo ""
-  echo -e "${GREEN}${BOLD}Done!${NC} After updating PATH, run ${BOLD}divan${NC} to get started."
-fi
-
-echo ""
-echo -e "${DIM}Quick start:${NC}"
-echo -e "  divan profiles             ${DIM}# see available profiles${NC}"
-echo -e "  divan init --profile web   ${DIM}# init a web project${NC}"
-echo -e "  divan init                 ${DIM}# interactive picker${NC}"
-echo ""
+# Run divan install from the clone
+exec "${DIVAN_HOME}/divan" install --bin-dir "$BIN_DIR" --divan-home "$DIVAN_HOME"
