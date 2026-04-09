@@ -1,0 +1,17 @@
+# Devtools Profile - For building Claude Code extensions
+name: devtools
+description: "For developing plugins, skills, agents, and hooks"
+extends: minimal
+plugins:
+  - superpowers
+  - commit-commands
+  - context7
+  - github
+  - ralph-loop
+  - plugin-dev
+  - skill-creator
+  - agent-sdk-dev
+  - claude-code-setup
+  - claude-md-management
+  - hookify
+  - remember

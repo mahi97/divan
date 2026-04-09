@@ -1,0 +1,17 @@
+# Web Profile - Web development focused
+name: web
+description: "For web applications and frontend projects"
+extends: minimal
+plugins:
+  - superpowers
+  - commit-commands
+  - context7
+  - github
+  - ralph-loop
+  - vercel
+  - frontend-design
+  - supabase
+  - code-review
+  - code-simplifier
+  - hookify
+  - remember

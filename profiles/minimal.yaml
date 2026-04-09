@@ -1,0 +1,9 @@
+# Minimal Profile - Essential plugins only
+name: minimal
+description: "Lightweight setup with only required plugins"
+plugins:
+  - superpowers
+  - commit-commands
+  - context7
+  - github
+  - ralph-loop

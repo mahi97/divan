@@ -1,0 +1,28 @@
+# Full Profile - All 24 plugins
+name: full
+description: "Complete stack for power users"
+plugins:
+  - superpowers
+  - commit-commands
+  - code-review
+  - code-simplifier
+  - feature-dev
+  - frontend-design
+  - hookify
+  - ralph-loop
+  - vercel
+  - huggingface-skills
+  - supabase
+  - context7
+  - greptile
+  - qodo-skills
+  - github
+  - plugin-dev
+  - skill-creator
+  - agent-sdk-dev
+  - claude-code-setup
+  - claude-md-management
+  - telegram
+  - clangd-lsp
+  - pyright-lsp
+  - remember

@@ -1,0 +1,168 @@
+# Divan - Claude Code Stack
+# The complete plugin, skill, hook, and workflow collection
+# maintained by @Mahi97
+#
+# This manifest defines all components in the stack.
+# The install script reads this file to configure Claude Code.
+
+version: "1.0.0"
+name: divan
+description: "Curated Claude Code stack - plugins, skills, hooks, agents, and workflows"
+author: Mahi97
+
+# ─── External Plugins (from claude-plugins-official marketplace) ──────────────
+plugins:
+  marketplace: claude-plugins-official
+
+  # Core Workflow
+  - name: superpowers
+    description: "Brainstorming, planning, TDD, debugging, parallel agents, code review workflows"
+    category: workflow
+    required: true
+
+  - name: commit-commands
+    description: "Git commit, push, PR, and branch cleanup commands"
+    category: git
+    required: true
+
+  - name: code-review
+    description: "Pull request and code review workflows"
+    category: git
+
+  - name: code-simplifier
+    description: "Code cleanup, reuse detection, and efficiency improvements"
+    category: code-quality
+
+  - name: feature-dev
+    description: "Guided feature development with architecture focus"
+    category: workflow
+
+  - name: frontend-design
+    description: "Production-grade frontend interface generation"
+    category: frontend
+
+  - name: hookify
+    description: "Create hooks to prevent unwanted behaviors from conversation analysis"
+    category: automation
+
+  - name: ralph-loop
+    description: "Self-referential loop prevention"
+    category: safety
+    required: true
+
+  # AI/ML Platforms
+  - name: vercel
+    description: "Vercel deployment, AI SDK, functions, storage, and platform management"
+    category: platform
+
+  - name: huggingface-skills
+    description: "ML model training, datasets, Gradio apps, and HF Hub operations"
+    category: ai-ml
+
+  - name: supabase
+    description: "Database, auth, storage, and edge functions via Supabase MCP"
+    category: platform
+
+  # Code Intelligence
+  - name: context7
+    description: "Live documentation lookup for any library/framework/SDK"
+    category: code-intelligence
+    required: true
+
+  - name: greptile
+    description: "Semantic codebase search and analysis"
+    category: code-intelligence
+
+  - name: qodo-skills
+    description: "Coding rules, PR review feedback, and code quality enforcement"
+    category: code-quality
+
+  # Development Tools
+  - name: github
+    description: "GitHub issues, PRs, repos, code search via Copilot MCP"
+    category: git
+    required: true
+
+  - name: plugin-dev
+    description: "Plugin, skill, hook, agent, and command development toolkit"
+    category: development
+
+  - name: skill-creator
+    description: "Create, modify, evaluate, and benchmark skills"
+    category: development
+
+  - name: agent-sdk-dev
+    description: "Claude Agent SDK application scaffolding and verification"
+    category: development
+
+  - name: claude-code-setup
+    description: "Automation recommendations for hooks, subagents, skills, plugins"
+    category: development
+
+  - name: claude-md-management
+    description: "Audit and improve CLAUDE.md files"
+    category: development
+
+  # Communication
+  - name: telegram
+    description: "Telegram bot integration for chat-based interactions"
+    category: communication
+
+  # Language Servers
+  - name: clangd-lsp
+    description: "C/C++ language server for code intelligence"
+    category: lsp
+
+  - name: pyright-lsp
+    description: "Python language server for type checking and intelligence"
+    category: lsp
+
+  # Session Management
+  - name: remember
+    description: "Persistent session state for clean continuation across sessions"
+    category: session
+
+# ─── MCP Servers ──────────────────────────────────────────────────────────────
+mcp_servers:
+  - name: github
+    url: "https://api.githubcopilot.com/mcp/"
+    auth: oauth
+    description: "GitHub Copilot MCP - issues, PRs, code search"
+
+  - name: vercel
+    url: "https://mcp.vercel.com"
+    auth: oauth
+    description: "Vercel platform - deployments, logs, projects"
+
+  - name: supabase
+    url: "https://mcp.supabase.com/mcp"
+    auth: oauth
+    description: "Supabase - database, auth, storage"
+
+  - name: huggingface
+    url: "https://huggingface.co/mcp?login"
+    auth: oauth
+    description: "Hugging Face Hub - models, datasets, spaces"
+
+  - name: greptile
+    url: "https://api.greptile.com/mcp"
+    auth: oauth
+    description: "Semantic code search and analysis"
+
+  - name: context7
+    description: "Library documentation lookup (embedded via plugin)"
+    embedded: true
+
+# ─── Settings ─────────────────────────────────────────────────────────────────
+settings:
+  model: "opus[1m]"
+  dangerous_mode: true
+
+# ─── Custom Components (defined in this repo) ────────────────────────────────
+custom:
+  skills: "skills/"
+  hooks: "hooks/"
+  agents: "agents/"
+  commands: "commands/"
+  workflows: "workflows/"
+  profiles: "profiles/"

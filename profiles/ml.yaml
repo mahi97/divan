@@ -1,0 +1,15 @@
+# ML Profile - Machine learning focused
+name: ml
+description: "For machine learning and AI research projects"
+extends: minimal
+plugins:
+  - superpowers
+  - commit-commands
+  - context7
+  - github
+  - ralph-loop
+  - huggingface-skills
+  - vercel
+  - pyright-lsp
+  - remember
+  - code-review
