@@ -16,7 +16,7 @@ set -euo pipefail
 #   divan user-install [--profile <name>]             Install at user level (~/.claude/)
 #   divan uninstall                                   Reset user-level settings
 
-DIVAN_ROOT="$(cd "$(dirname "$0")" && pwd)"
+DIVAN_ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 CLAUDE_DIR="${HOME}/.claude"
 SETTINGS_FILE="${CLAUDE_DIR}/settings.json"
 MARKETPLACE="claude-plugins-official"
@@ -89,10 +89,10 @@ plugin_marketplace() {
   local name="$1"
   local mkt
   mkt=$(awk -v name="$name" '
-    /^  - name:/ { found = ($NF == name) }
-    found && /marketplace:/ { gsub(/.*marketplace:\s*/, ""); gsub(/^["'\''"]/, ""); gsub(/["'\''"]$/, ""); print; found=0 }
+    /^  - name:/ && $NF == name { found = 1; next }
+    found && /marketplace:/ { gsub(/.*marketplace:\s*/, ""); gsub(/["'\''"]/, ""); print; found=0; next }
     found && /^  - name:/ { found=0 }
-  ' "${DIVAN_ROOT}/stack.yaml" | tr -d '"' | tr -d "'" | head -1)
+  ' "${DIVAN_ROOT}/stack.yaml" | head -1)
   echo "${mkt:-$MARKETPLACE}"
 }
 
