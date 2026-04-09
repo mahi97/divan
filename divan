@@ -759,6 +759,103 @@ cmd_user_install() {
   echo ""
 }
 
+# ─── divan self-install ───────────────────────────────────────────────────────
+
+cmd_self_install() {
+  local install_dir="${HOME}/.local/bin"
+  local divan_home="${HOME}/.divan"
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --bin-dir)    install_dir="$2"; shift 2 ;;
+      --divan-home) divan_home="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  echo ""
+  log_info "Installing divan CLI..."
+
+  # If running from a git clone, use that as DIVAN_HOME
+  if [[ -d "${DIVAN_ROOT}/.git" ]]; then
+    divan_home="$DIVAN_ROOT"
+    log_dim "Using existing clone at ${divan_home}"
+  else
+    # Running from curl pipe — need to clone
+    if [[ ! -d "$divan_home" ]]; then
+      need_cmd git
+      log_info "Cloning divan to ${divan_home}..."
+      git clone --depth 1 https://github.com/mahi97/divan.git "$divan_home"
+    else
+      log_dim "Divan repo already at ${divan_home}"
+      log_info "Pulling latest..."
+      git -C "$divan_home" pull --ff-only 2>/dev/null || true
+    fi
+  fi
+
+  # Ensure bin directory exists and is on PATH
+  mkdir -p "$install_dir"
+
+  # Create symlink
+  ln -sf "${divan_home}/divan" "${install_dir}/divan"
+  log_ok "Linked divan → ${install_dir}/divan"
+
+  # Check if install_dir is on PATH
+  if ! echo "$PATH" | tr ':' '\n' | grep -qx "$install_dir"; then
+    log_warn "${install_dir} is not on your PATH."
+    echo ""
+    echo "  Add it by appending one of these to your shell config:"
+    echo ""
+
+    # Detect shell
+    local shell_rc=""
+    case "${SHELL:-}" in
+      */zsh)  shell_rc="~/.zshrc" ;;
+      */bash) shell_rc="~/.bashrc" ;;
+      *)      shell_rc="your shell config" ;;
+    esac
+
+    echo -e "    ${BOLD}echo 'export PATH=\"${install_dir}:\$PATH\"' >> ${shell_rc}${NC}"
+    echo ""
+    echo "  Then restart your shell or run:"
+    echo ""
+    echo -e "    ${BOLD}source ${shell_rc}${NC}"
+    echo ""
+  else
+    log_ok "${install_dir} is already on PATH"
+  fi
+
+  # Verify
+  if command -v divan &>/dev/null; then
+    echo ""
+    echo -e "${GREEN}${BOLD}divan is ready!${NC} Run ${BOLD}divan${NC} from anywhere."
+  else
+    echo ""
+    echo -e "${GREEN}${BOLD}divan installed!${NC} Restart your shell, then run ${BOLD}divan${NC} from anywhere."
+  fi
+  echo ""
+}
+
+# ─── divan self-uninstall ────────────────────────────────────────────────────
+
+cmd_self_uninstall() {
+  local install_dir="${HOME}/.local/bin"
+  local link="${install_dir}/divan"
+
+  if [[ -L "$link" ]]; then
+    rm "$link"
+    log_ok "Removed ${link}"
+  elif [[ -f "$link" ]]; then
+    rm "$link"
+    log_ok "Removed ${link}"
+  else
+    log_warn "No divan found in ${install_dir}"
+  fi
+
+  log_dim "Divan repo at ${DIVAN_ROOT} was not removed."
+  log_dim "To fully remove: rm -rf ${DIVAN_ROOT}"
+}
+
 # ─── divan uninstall ──────────────────────────────────────────────────────────
 
 cmd_uninstall() {
@@ -785,6 +882,7 @@ usage() {
   echo "Usage: divan <command> [options]"
   echo ""
   echo "Commands:"
+  echo "  self-install      Install divan CLI to PATH (~/.local/bin)"
   echo "  init              Initialize a project with a profile"
   echo "  add <plugin|tag>  Add plugins to current project"
   echo "  remove <plugin>   Remove a plugin from current project"
@@ -793,14 +891,16 @@ usage() {
   echo "  status            Show current project's config"
   echo "  sync              Re-sync project from its profile"
   echo "  user-install      Install at user level (~/.claude/)"
-  echo "  uninstall         Reset user-level settings"
+  echo "  uninstall         Reset user-level Claude Code settings"
+  echo "  self-uninstall    Remove divan CLI from PATH"
   echo ""
   echo "Examples:"
-  echo "  divan init --profile web"
-  echo "  divan init --profile ml --target ~/my-research"
-  echo "  divan add frontend-design"
-  echo "  divan add ai-ml              # add all plugins tagged 'ai-ml'"
-  echo "  divan list --profile web"
+  echo "  divan self-install                            # install CLI globally"
+  echo "  divan init --profile web                      # init a web project"
+  echo "  divan init --profile ml --target ~/research   # init elsewhere"
+  echo "  divan add frontend-design                     # add a plugin"
+  echo "  divan add ai-ml                               # add by tag"
+  echo "  divan list --profile web                      # preview a profile"
   echo ""
 }
 
@@ -811,15 +911,17 @@ usage() {
 CMD="$1"; shift
 
 case "$CMD" in
-  init)          cmd_init "$@" ;;
-  add)           [[ $# -ge 1 ]] || { log_err "Usage: divan add <plugin|tag>"; exit 1; }; cmd_add "$@" ;;
-  remove|rm)     [[ $# -ge 1 ]] || { log_err "Usage: divan remove <plugin>"; exit 1; }; cmd_remove "$@" ;;
-  list|ls)       cmd_list "$@" ;;
-  profiles)      cmd_profiles ;;
-  status|st)     cmd_status ;;
-  sync)          cmd_sync ;;
-  user-install)  cmd_user_install "$@" ;;
-  uninstall)     cmd_uninstall ;;
-  help|-h|--help) usage ;;
-  *)             log_err "Unknown command: $CMD"; usage; exit 1 ;;
+  self-install)    cmd_self_install "$@" ;;
+  self-uninstall)  cmd_self_uninstall ;;
+  init)            cmd_init "$@" ;;
+  add)             [[ $# -ge 1 ]] || { log_err "Usage: divan add <plugin|tag>"; exit 1; }; cmd_add "$@" ;;
+  remove|rm)       [[ $# -ge 1 ]] || { log_err "Usage: divan remove <plugin>"; exit 1; }; cmd_remove "$@" ;;
+  list|ls)         cmd_list "$@" ;;
+  profiles)        cmd_profiles ;;
+  status|st)       cmd_status ;;
+  sync)            cmd_sync ;;
+  user-install)    cmd_user_install "$@" ;;
+  uninstall)       cmd_uninstall ;;
+  help|-h|--help)  usage ;;
+  *)               log_err "Unknown command: $CMD"; usage; exit 1 ;;
 esac

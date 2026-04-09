@@ -23,16 +23,24 @@
 ## Commands
 
 ```bash
-./divan init --profile web --target ~/app   # Initialize project
-./divan add ai-ml                           # Add by tag
-./divan add telegram                        # Add by name
-./divan remove telegram                     # Remove (not core)
-./divan list --profile ml                   # Preview a profile
-./divan profiles                            # List all profiles
-./divan status                              # Current project info
-./divan sync                                # Re-sync from profile
-./divan user-install --profile full         # User-level install
+divan self-install                          # Install CLI to ~/.local/bin
+divan init --profile web --target ~/app     # Initialize project
+divan add ai-ml                             # Add by tag
+divan add telegram                          # Add by name
+divan remove telegram                       # Remove (not core)
+divan list --profile ml                     # Preview a profile
+divan profiles                              # List all profiles
+divan status                                # Current project info
+divan sync                                  # Re-sync from profile
+divan user-install --profile full           # User-level install
+divan self-uninstall                        # Remove CLI from PATH
 ```
+
+## Installation
+
+- `install.sh` — Remote installer for `curl | bash`. Clones to `~/.divan`, links to `~/.local/bin/divan`
+- `divan self-install` — Same but from a local clone. Detects if running from git repo
+- `DIVAN_HOME` and `BIN_DIR` env vars override defaults
 
 ## Conventions
 
