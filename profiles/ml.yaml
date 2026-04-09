@@ -1,15 +1,29 @@
-# ML Profile - Machine learning focused
+# ML Profile - Machine learning and AI research
 name: ml
-description: "For machine learning and AI research projects"
-extends: minimal
-plugins:
-  - superpowers
-  - commit-commands
-  - context7
-  - github
-  - ralph-loop
+description: "HuggingFace, model training, datasets, experiment tracking, Python tooling."
+icon: "ML"
+
+tags: [core, git, code-quality, workflow, ai-ml, python]
+
+extras:
   - huggingface-skills
   - vercel
   - pyright-lsp
-  - remember
   - code-review
+  - feature-dev
+
+settings:
+  model: "opus[1m]"
+
+claude_md:
+  append: |
+    ## Divan Profile: ml
+    Optimized for machine learning and AI research.
+    Includes: HuggingFace (training, datasets, Gradio, Hub), Vercel (AI SDK, deployment),
+    Python LSP, and code quality tools.
+
+    ### Quick Commands
+    - HF model training: use huggingface-skills for SFT, DPO, GRPO
+    - HF datasets: browse, filter, and download via Dataset Viewer API
+    - `/vercel:ai-sdk` - Build AI-powered features
+    - Pyright LSP active for Python type checking

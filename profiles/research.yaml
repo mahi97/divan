@@ -1,0 +1,30 @@
+# Research Profile - Academic and scientific research
+name: research
+description: "Paper reading, HuggingFace, experiment workflows, Python, and documentation."
+icon: "RS"
+
+tags: [core, git, code-quality, workflow, ai-ml, python]
+
+extras:
+  - huggingface-skills
+  - pyright-lsp
+  - code-review
+  - feature-dev
+  - greptile
+  - claude-md-management
+
+settings:
+  model: "opus[1m]"
+
+claude_md:
+  append: |
+    ## Divan Profile: research
+    Optimized for academic and scientific research projects.
+    Includes: HuggingFace (papers, models, datasets), Greptile (semantic code search),
+    Python LSP, and documentation tools.
+
+    ### Quick Commands
+    - HF paper search and reading
+    - HF model/dataset exploration
+    - Greptile for deep codebase analysis
+    - `/claude-md-management:revise-claude-md` - Keep docs current

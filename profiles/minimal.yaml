@@ -1,9 +1,16 @@
-# Minimal Profile - Essential plugins only
+# Minimal Profile - Core essentials only
 name: minimal
-description: "Lightweight setup with only required plugins"
-plugins:
-  - superpowers
-  - commit-commands
-  - context7
-  - github
-  - ralph-loop
+description: "Lightweight. Just the core plugins for any project."
+icon: "--"
+
+tags: [core]
+extras: []
+
+settings:
+  model: "opus[1m]"
+
+claude_md:
+  append: |
+    ## Divan Profile: minimal
+    Core plugins only: superpowers, github, commit-commands, context7, ralph-loop, remember.
+    Run `divan add <plugin>` to add more as needed.

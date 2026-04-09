@@ -1,0 +1,25 @@
+# Embedded/Systems Profile - C/C++ and low-level development
+name: embedded
+description: "C/C++ development with clangd LSP, code quality, and git workflows."
+icon: "EM"
+
+tags: [core, git, code-quality, workflow, cpp]
+
+extras:
+  - clangd-lsp
+  - code-review
+  - code-simplifier
+  - feature-dev
+  - greptile
+
+settings:
+  model: "opus[1m]"
+
+claude_md:
+  append: |
+    ## Divan Profile: embedded
+    Optimized for C/C++ and systems programming.
+    Includes: clangd LSP, code review, code quality, and git workflows.
+
+    ### Active Language Server
+    - clangd provides completions, diagnostics, go-to-definition, and refactoring

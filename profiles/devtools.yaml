@@ -1,17 +1,30 @@
-# Devtools Profile - For building Claude Code extensions
+# Devtools Profile - Building Claude Code extensions
 name: devtools
-description: "For developing plugins, skills, agents, and hooks"
-extends: minimal
-plugins:
-  - superpowers
-  - commit-commands
-  - context7
-  - github
-  - ralph-loop
+description: "Plugin development, skill authoring, agent building, hook creation."
+icon: "DV"
+
+tags: [core, git, devtools, workflow, automation]
+
+extras:
   - plugin-dev
   - skill-creator
   - agent-sdk-dev
   - claude-code-setup
   - claude-md-management
   - hookify
-  - remember
+  - code-review
+
+settings:
+  model: "opus[1m]"
+
+claude_md:
+  append: |
+    ## Divan Profile: devtools
+    Optimized for building Claude Code extensions.
+    Includes: plugin-dev, skill-creator, agent-sdk-dev, hookify, and quality tools.
+
+    ### Quick Commands
+    - `/plugin-dev:create-plugin` - Scaffold a new plugin
+    - `/skill-creator` - Create or improve skills
+    - `/hookify` - Create hooks from conversation analysis
+    - `/claude-md-management:revise-claude-md` - Update CLAUDE.md

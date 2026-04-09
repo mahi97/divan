@@ -1,28 +1,20 @@
-# Full Profile - All 24 plugins
+# Full Profile - Everything
 name: full
-description: "Complete stack for power users"
-plugins:
-  - superpowers
-  - commit-commands
-  - code-review
-  - code-simplifier
-  - feature-dev
-  - frontend-design
-  - hookify
-  - ralph-loop
-  - vercel
-  - huggingface-skills
-  - supabase
-  - context7
-  - greptile
-  - qodo-skills
-  - github
-  - plugin-dev
-  - skill-creator
-  - agent-sdk-dev
-  - claude-code-setup
-  - claude-md-management
-  - telegram
-  - clangd-lsp
-  - pyright-lsp
-  - remember
+description: "The complete stack. Every plugin, skill, hook, and agent."
+icon: "**"
+
+# Include all tags
+tags: [core, git, code-quality, workflow, frontend, backend, ai-ml, platform, code-intel, devtools, communication, lsp, session, safety, python, cpp, automation]
+
+# No extras needed - tags cover everything
+extras: []
+
+# Project-level settings
+settings:
+  model: "opus[1m]"
+
+# CLAUDE.md sections to generate
+claude_md:
+  append: |
+    ## Divan Profile: full
+    All plugins and tools are available. See `divan list` for the full inventory.

@@ -1,114 +1,146 @@
 # Divan
 
-**A curated Claude Code stack** -- plugins, skills, hooks, agents, and workflows in one installable collection.
+**A curated Claude Code super collection** -- every plugin, skill, hook, agent, and workflow you need, installable by use case.
 
-Divan (Persian: a collection of poems/works) is a batteries-included setup for Claude Code that combines 24 official marketplace plugins, custom skills, hooks, and workflows into a single repo you can install at user or project level.
+Divan (Persian: a collected works) bundles 24 official marketplace plugins, 6 MCP servers, custom skills, hooks, and workflows into a single CLI. Initialize any project with the right subset for your work.
 
 ## Quick Start
 
 ```bash
-# Clone
-git clone https://github.com/Mahi97/divan.git
+git clone https://github.com/mahi97/divan.git
 cd divan
 
-# Install everything at user level
-./install.sh --user
+# Initialize a project with a profile
+./divan init --profile web --target ~/my-app
 
-# Or interactive mode
-./install.sh
+# Or pick interactively
+./divan init
 ```
 
-## What's Included
-
-### External Plugins (24)
-
-| Category | Plugins | Description |
-|----------|---------|-------------|
-| **Workflow** | superpowers, feature-dev, hookify | Planning, TDD, debugging, brainstorming, parallel agents |
-| **Git** | github, commit-commands, code-review | Full GitHub integration, commit/push/PR, code review |
-| **Code Quality** | code-simplifier, qodo-skills | Cleanup, rule enforcement, PR feedback |
-| **AI/ML Platforms** | vercel, huggingface-skills, supabase | Deployment, ML training, database/auth |
-| **Code Intelligence** | context7, greptile | Live docs lookup, semantic search |
-| **Frontend** | frontend-design | Production-grade UI generation |
-| **Development** | plugin-dev, skill-creator, agent-sdk-dev, claude-code-setup, claude-md-management | Build your own plugins, skills, agents |
-| **Communication** | telegram | Chat-based interactions via Telegram bot |
-| **LSP** | clangd-lsp, pyright-lsp | C/C++ and Python language servers |
-| **Session** | remember | Persistent state across sessions |
-| **Safety** | ralph-loop | Self-referential loop prevention |
-
-### MCP Servers
-
-| Server | Endpoint | Purpose |
-|--------|----------|---------|
-| GitHub | `api.githubcopilot.com/mcp/` | Issues, PRs, code search |
-| Vercel | `mcp.vercel.com` | Deployments, logs, projects |
-| Supabase | `mcp.supabase.com/mcp` | Database, auth, storage |
-| Hugging Face | `huggingface.co/mcp` | Models, datasets, spaces |
-| Greptile | `api.greptile.com/mcp` | Semantic code search |
-| Context7 | *(embedded)* | Library documentation |
-
-### Custom Components
+## The `divan` CLI
 
 ```
-skills/       # Custom Claude Code skills
-hooks/        # Custom hook scripts
-agents/       # Custom agent definitions
-commands/     # Custom slash commands
-workflows/    # Multi-step workflow definitions
-profiles/     # Installation profiles (minimal, full, ml, web, etc.)
-```
-
-## Installation Modes
-
-### User-Level (Global)
-
-Configures `~/.claude/settings.json` with all plugins enabled:
-
-```bash
-./install.sh --user           # Full stack (24 plugins)
-./install.sh --user --minimal # Required plugins only (5 plugins)
-```
-
-### Project-Level
-
-Copies skills, hooks, commands, and CLAUDE.md into a target project:
-
-```bash
-./install.sh --project                     # Current directory
-./install.sh --project --target ~/my-app   # Specific directory
-```
-
-### Both
-
-```bash
-./install.sh --user --project   # or interactive mode option 3
-```
-
-### Dry Run
-
-```bash
-./install.sh --user --dry-run   # Preview changes without applying
+divan init [--profile <name>] [--target <dir>]   Initialize a project
+divan add <plugin|tag>                            Add a component
+divan remove <plugin>                             Remove a component
+divan list [--profile <name>]                     Browse the collection
+divan profiles                                    List all profiles
+divan status                                      Show current project config
+divan sync                                        Re-sync from profile
+divan user-install [--profile <name>]             Install at user level
+divan uninstall                                   Reset user settings
 ```
 
 ## Profiles
 
-Profiles let you install a subset of the stack tuned for a specific workflow:
+Each profile selects a subset of the collection tuned for a use case:
 
 | Profile | Plugins | Use Case |
 |---------|---------|----------|
-| `full` | All 24 | Everything, for power users |
-| `minimal` | 5 required | Lightweight, essential only |
-| `ml` | minimal + huggingface, vercel | Machine learning projects |
-| `web` | minimal + vercel, frontend-design, supabase | Web development |
-| `devtools` | minimal + plugin-dev, skill-creator, agent-sdk-dev | Building Claude Code extensions |
+| `full` | 24 | Everything -- power users |
+| `minimal` | 6 | Core essentials only |
+| `web` | 15 | Next.js, Vercel, Supabase, frontend |
+| `ml` | 14 | HuggingFace, training, datasets, Python |
+| `research` | 14 | Papers, experiments, documentation |
+| `devtools` | 14 | Building plugins, skills, agents |
+| `embedded` | 12 | C/C++ with clangd LSP |
 
 ```bash
-./install.sh --user --profile ml
+# Preview what a profile includes
+./divan list --profile ml
+
+# See all profiles with their plugin lists
+./divan profiles
 ```
 
-## Custom Skills
+## What's in the Collection
 
-Add your own skills in `skills/`:
+### Plugins (24)
+
+| Category | Plugins |
+|----------|---------|
+| **Core** | superpowers, github, commit-commands, context7, ralph-loop, remember |
+| **Git & Quality** | code-review, code-simplifier, qodo-skills |
+| **Workflow** | feature-dev, hookify |
+| **Frontend** | frontend-design |
+| **Platforms** | vercel, supabase, huggingface-skills |
+| **Code Intel** | greptile |
+| **Dev Tools** | plugin-dev, skill-creator, agent-sdk-dev, claude-code-setup, claude-md-management |
+| **Communication** | telegram |
+| **LSP** | clangd-lsp, pyright-lsp |
+
+### MCP Servers (6)
+
+GitHub Copilot, Vercel, Supabase, Hugging Face, Greptile, Context7 -- configured automatically by their plugins.
+
+### Custom Components
+
+```
+skills/       # Your custom Claude Code skills
+hooks/        # Custom hook configs + scripts
+agents/       # Custom agent definitions
+commands/     # Custom slash commands
+workflows/    # Multi-step workflow templates
+```
+
+## How It Works
+
+### Project Initialization
+
+`divan init` does the following:
+
+1. **Selects a profile** (interactive picker or `--profile` flag)
+2. **Resolves plugins** from profile tags + extras + required core
+3. **Creates `.divan.yaml`** -- lockfile tracking what's installed
+4. **Updates `~/.claude/settings.json`** -- enables plugins globally
+5. **Creates `.claude/settings.json`** -- project-level config
+6. **Generates `CLAUDE.md`** -- with profile-specific guidance
+7. **Copies custom skills/hooks/commands** from this repo
+
+### Adding & Removing
+
+After init, modify your project's stack:
+
+```bash
+# Add a single plugin
+divan add frontend-design
+
+# Add all plugins with a tag
+divan add ai-ml
+
+# Remove a plugin (core plugins can't be removed)
+divan remove telegram
+```
+
+### Tag System
+
+Every plugin has tags. Profiles select by tag, so adding a new plugin to `stack.yaml` with the right tags automatically includes it in matching profiles.
+
+Available tags: `core`, `git`, `code-quality`, `workflow`, `frontend`, `backend`, `ai-ml`, `platform`, `code-intel`, `devtools`, `communication`, `lsp`, `session`, `safety`, `python`, `cpp`, `automation`
+
+## Creating Custom Profiles
+
+Add a YAML file to `profiles/`:
+
+```yaml
+name: my-profile
+description: "My custom setup"
+icon: "MY"
+tags: [core, git, workflow, python]
+extras:
+  - pyright-lsp
+  - greptile
+settings:
+  model: "opus[1m]"
+claude_md:
+  append: |
+    ## Divan Profile: my-profile
+    Your project-specific guidance here.
+```
+
+## Contributing Custom Components
+
+### Skills
 
 ```markdown
 <!-- skills/my-skill.md -->
@@ -116,24 +148,19 @@ Add your own skills in `skills/`:
 name: my-skill
 description: What this skill does
 ---
-
 Skill instructions here...
 ```
 
-## Custom Hooks
-
-Add hooks in `hooks/`:
+### Hooks
 
 ```yaml
-# hooks/pre-commit-check.yaml
+# hooks/my-hook.yaml
 event: PreToolUse
 matcher: Bash
-script: hooks/scripts/pre-commit-check.sh
+script: hooks/scripts/my-hook.sh
 ```
 
-## Custom Agents
-
-Define agents in `agents/`:
+### Agents
 
 ```markdown
 <!-- agents/my-agent.md -->
@@ -143,63 +170,23 @@ description: Agent purpose
 model: sonnet
 tools: [Read, Grep, Glob, Bash]
 ---
-
 Agent system prompt here...
-```
-
-## Project Structure
-
-```
-divan/
-  stack.yaml          # Stack manifest - all components listed here
-  install.sh          # Installer script
-  README.md           # This file
-  CLAUDE.md           # Agent-facing project documentation
-  skills/             # Custom skills
-    README.md         # Skill authoring guide
-  hooks/              # Custom hooks
-    README.md         # Hook authoring guide
-    scripts/          # Hook script implementations
-  agents/             # Custom agent definitions
-    README.md         # Agent authoring guide
-  commands/           # Custom slash commands
-  workflows/          # Multi-step workflow definitions
-  profiles/           # Installation profiles
-    full.yaml
-    minimal.yaml
-    ml.yaml
-    web.yaml
-    devtools.yaml
-  docs/               # Extended documentation
-    plugin-guide.md   # Detailed plugin descriptions
-    mcp-setup.md      # MCP server configuration
-    troubleshooting.md
 ```
 
 ## Updating
 
-Pull the latest and re-run install:
-
 ```bash
-cd divan
-git pull
-./install.sh --user
+cd divan && git pull
+divan sync   # in your project directory
 ```
 
 ## Uninstalling
 
 ```bash
-./install.sh --uninstall   # Resets settings, keeps plugin cache
+divan uninstall   # resets ~/.claude/settings.json
 ```
 
-A backup is automatically created before any changes.
-
-## Contributing
-
-1. Fork this repo
-2. Add your skills/hooks/agents/commands
-3. Update `stack.yaml` with new components
-4. Submit a PR
+A backup is created automatically before any changes.
 
 ## License
 

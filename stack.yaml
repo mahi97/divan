@@ -1,168 +1,167 @@
-# Divan - Claude Code Stack
-# The complete plugin, skill, hook, and workflow collection
-# maintained by @Mahi97
+# Divan - Claude Code Super Collection
+# ═══════════════════════════════════════════════════════════════════════════════
+# The master manifest of all available components.
+# Profiles select subsets by tags. The `divan` CLI reads this file.
 #
-# This manifest defines all components in the stack.
-# The install script reads this file to configure Claude Code.
+# Every plugin/skill/hook/agent is tagged so profiles can compose them freely.
+# Tags: core, git, code-quality, workflow, frontend, backend, ai-ml, platform,
+#       code-intel, devtools, communication, lsp, session, safety, python, cpp
 
-version: "1.0.0"
+version: "2.0.0"
 name: divan
-description: "Curated Claude Code stack - plugins, skills, hooks, agents, and workflows"
+description: "Curated Claude Code super collection"
 author: Mahi97
+marketplace: claude-plugins-official
 
-# ─── External Plugins (from claude-plugins-official marketplace) ──────────────
+# ─── Plugins ──────────────────────────────────────────────────────────────────
 plugins:
-  marketplace: claude-plugins-official
-
-  # Core Workflow
+  # ── Core (always included) ──
   - name: superpowers
-    description: "Brainstorming, planning, TDD, debugging, parallel agents, code review workflows"
-    category: workflow
+    description: "Brainstorming, planning, TDD, debugging, parallel agents, code review"
+    tags: [core, workflow]
+    required: true
+
+  - name: ralph-loop
+    description: "Self-referential loop prevention"
+    tags: [core, safety]
+    required: true
+
+  - name: context7
+    description: "Live documentation lookup for any library/framework/SDK"
+    tags: [core, code-intel]
+    required: true
+
+  - name: github
+    description: "GitHub issues, PRs, repos, code search via Copilot MCP"
+    tags: [core, git]
     required: true
 
   - name: commit-commands
     description: "Git commit, push, PR, and branch cleanup commands"
-    category: git
+    tags: [core, git]
     required: true
 
+  - name: remember
+    description: "Persistent session state across conversations"
+    tags: [core, session]
+    required: true
+
+  # ── Git & Code Quality ──
   - name: code-review
     description: "Pull request and code review workflows"
-    category: git
+    tags: [git, code-quality]
 
   - name: code-simplifier
-    description: "Code cleanup, reuse detection, and efficiency improvements"
-    category: code-quality
-
-  - name: feature-dev
-    description: "Guided feature development with architecture focus"
-    category: workflow
-
-  - name: frontend-design
-    description: "Production-grade frontend interface generation"
-    category: frontend
-
-  - name: hookify
-    description: "Create hooks to prevent unwanted behaviors from conversation analysis"
-    category: automation
-
-  - name: ralph-loop
-    description: "Self-referential loop prevention"
-    category: safety
-    required: true
-
-  # AI/ML Platforms
-  - name: vercel
-    description: "Vercel deployment, AI SDK, functions, storage, and platform management"
-    category: platform
-
-  - name: huggingface-skills
-    description: "ML model training, datasets, Gradio apps, and HF Hub operations"
-    category: ai-ml
-
-  - name: supabase
-    description: "Database, auth, storage, and edge functions via Supabase MCP"
-    category: platform
-
-  # Code Intelligence
-  - name: context7
-    description: "Live documentation lookup for any library/framework/SDK"
-    category: code-intelligence
-    required: true
-
-  - name: greptile
-    description: "Semantic codebase search and analysis"
-    category: code-intelligence
+    description: "Code cleanup, reuse detection, efficiency improvements"
+    tags: [code-quality]
 
   - name: qodo-skills
-    description: "Coding rules, PR review feedback, and code quality enforcement"
-    category: code-quality
+    description: "Coding rules, PR review feedback, code quality enforcement"
+    tags: [code-quality]
 
-  # Development Tools
-  - name: github
-    description: "GitHub issues, PRs, repos, code search via Copilot MCP"
-    category: git
-    required: true
+  # ── Workflow & Automation ──
+  - name: feature-dev
+    description: "Guided feature development with architecture focus"
+    tags: [workflow]
 
+  - name: hookify
+    description: "Create hooks to prevent unwanted behaviors"
+    tags: [workflow, automation]
+
+  # ── Frontend ──
+  - name: frontend-design
+    description: "Production-grade frontend interface generation"
+    tags: [frontend]
+
+  # ── Platforms & Backend ──
+  - name: vercel
+    description: "Vercel deployment, AI SDK, functions, storage, platform management"
+    tags: [platform, frontend, backend, ai-ml]
+
+  - name: supabase
+    description: "Database, auth, storage, edge functions via Supabase MCP"
+    tags: [platform, backend]
+
+  - name: huggingface-skills
+    description: "ML model training, datasets, Gradio apps, HF Hub operations"
+    tags: [ai-ml, platform]
+
+  # ── Code Intelligence ──
+  - name: greptile
+    description: "Semantic codebase search and analysis"
+    tags: [code-intel]
+
+  # ── Development Tools ──
   - name: plugin-dev
-    description: "Plugin, skill, hook, agent, and command development toolkit"
-    category: development
+    description: "Plugin, skill, hook, agent, command development toolkit"
+    tags: [devtools]
 
   - name: skill-creator
     description: "Create, modify, evaluate, and benchmark skills"
-    category: development
+    tags: [devtools]
 
   - name: agent-sdk-dev
-    description: "Claude Agent SDK application scaffolding and verification"
-    category: development
+    description: "Claude Agent SDK app scaffolding and verification"
+    tags: [devtools]
 
   - name: claude-code-setup
-    description: "Automation recommendations for hooks, subagents, skills, plugins"
-    category: development
+    description: "Automation recommendations for hooks, subagents, skills"
+    tags: [devtools]
 
   - name: claude-md-management
     description: "Audit and improve CLAUDE.md files"
-    category: development
+    tags: [devtools]
 
-  # Communication
+  # ── Communication ──
   - name: telegram
     description: "Telegram bot integration for chat-based interactions"
-    category: communication
+    tags: [communication]
 
-  # Language Servers
+  # ── Language Servers ──
   - name: clangd-lsp
     description: "C/C++ language server for code intelligence"
-    category: lsp
+    tags: [lsp, cpp]
 
   - name: pyright-lsp
     description: "Python language server for type checking and intelligence"
-    category: lsp
-
-  # Session Management
-  - name: remember
-    description: "Persistent session state for clean continuation across sessions"
-    category: session
+    tags: [lsp, python]
 
 # ─── MCP Servers ──────────────────────────────────────────────────────────────
 mcp_servers:
   - name: github
     url: "https://api.githubcopilot.com/mcp/"
     auth: oauth
-    description: "GitHub Copilot MCP - issues, PRs, code search"
+    plugin: github
 
   - name: vercel
     url: "https://mcp.vercel.com"
     auth: oauth
-    description: "Vercel platform - deployments, logs, projects"
+    plugin: vercel
 
   - name: supabase
     url: "https://mcp.supabase.com/mcp"
     auth: oauth
-    description: "Supabase - database, auth, storage"
+    plugin: supabase
 
   - name: huggingface
     url: "https://huggingface.co/mcp?login"
     auth: oauth
-    description: "Hugging Face Hub - models, datasets, spaces"
+    plugin: huggingface-skills
 
   - name: greptile
     url: "https://api.greptile.com/mcp"
     auth: oauth
-    description: "Semantic code search and analysis"
+    plugin: greptile
 
   - name: context7
-    description: "Library documentation lookup (embedded via plugin)"
     embedded: true
+    plugin: context7
 
-# ─── Settings ─────────────────────────────────────────────────────────────────
-settings:
-  model: "opus[1m]"
-  dangerous_mode: true
-
-# ─── Custom Components (defined in this repo) ────────────────────────────────
+# ─── Custom Components ────────────────────────────────────────────────────────
+# Skills, hooks, agents, and commands defined in this repo.
+# Each has tags so profiles can select them just like plugins.
 custom:
-  skills: "skills/"
-  hooks: "hooks/"
-  agents: "agents/"
-  commands: "commands/"
-  workflows: "workflows/"
-  profiles: "profiles/"
+  skills_dir: "skills/"
+  hooks_dir: "hooks/"
+  agents_dir: "agents/"
+  commands_dir: "commands/"

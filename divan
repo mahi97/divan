@@ -1,0 +1,825 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# divan - Claude Code Super Collection CLI
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Commands:
+#   divan init [--profile <name>] [--target <dir>]   Initialize a project
+#   divan add <plugin|tag>                            Add a component to current project
+#   divan remove <plugin>                             Remove a component
+#   divan list [--profile <name>]                     List available components
+#   divan profiles                                    List available profiles
+#   divan status                                      Show current project's divan config
+#   divan sync                                        Re-sync project from its profile
+#   divan user-install [--profile <name>]             Install at user level (~/.claude/)
+#   divan uninstall                                   Reset user-level settings
+
+DIVAN_ROOT="$(cd "$(dirname "$0")" && pwd)"
+CLAUDE_DIR="${HOME}/.claude"
+SETTINGS_FILE="${CLAUDE_DIR}/settings.json"
+MARKETPLACE="claude-plugins-official"
+
+# ─── Colors ───────────────────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+BLUE='\033[0;34m'; CYAN='\033[0;36m'; DIM='\033[2m'
+BOLD='\033[1m'; NC='\033[0m'
+
+log_info()    { echo -e "${BLUE}>>>${NC} $1"; }
+log_ok()      { echo -e "${GREEN} +${NC} $1"; }
+log_warn()    { echo -e "${YELLOW} !${NC} $1"; }
+log_err()     { echo -e "${RED} x${NC} $1"; }
+log_dim()     { echo -e "${DIM}   $1${NC}"; }
+
+# ─── Dependencies ─────────────────────────────────────────────────────────────
+
+need_cmd() {
+  command -v "$1" &>/dev/null || { log_err "$1 is required. Install it first."; exit 1; }
+}
+
+# We parse YAML with grep/sed/awk — no external YAML parser needed.
+# jq is needed only for JSON manipulation of settings.json.
+need_cmd jq
+
+# ─── YAML helpers (stdlib only — no yq/python needed) ─────────────────────────
+
+# Get all plugin names (only from the plugins: section, not mcp_servers:)
+all_plugin_names() {
+  awk '/^plugins:/{found=1} found && /^[a-z_]/ && !/^plugins:/{found=0} found && /^  - name:/{print $NF}' \
+    "${DIVAN_ROOT}/stack.yaml" | tr -d '"' | tr -d "'"
+}
+
+# Get tags for a specific plugin (space-separated)
+plugin_tags() {
+  local name="$1"
+  awk -v name="$name" '
+    /^  - name:/ { found = ($NF == name || $NF == "\"" name "\"") }
+    found && /tags:/ { gsub(/.*\[/, ""); gsub(/\].*/, ""); gsub(/,[ ]*/, " "); print; found=0 }
+  ' "${DIVAN_ROOT}/stack.yaml" | tr -d '"' | tr -d "'" | sed 's/  */ /g; s/^ *//; s/ *$//'
+}
+
+# Check if plugin has a specific tag
+plugin_has_tag() {
+  local name="$1" tag="$2"
+  plugin_tags "$name" | tr ',' ' ' | grep -qw "$tag"
+}
+
+# Check if plugin is required
+plugin_is_required() {
+  local name="$1"
+  awk -v name="$name" '
+    /^  - name:/ { found = ($NF == name) }
+    found && /required:\s*true/ { print "yes"; found=0 }
+    found && /^  - name:/ { found=0 }
+  ' "${DIVAN_ROOT}/stack.yaml" | grep -q "yes"
+}
+
+# Get description for a plugin
+plugin_desc() {
+  local name="$1"
+  awk -v name="$name" '
+    /^  - name:/ { found = ($NF == name) }
+    found && /description:/ { gsub(/.*description:\s*/, ""); gsub(/^["'\'']/, ""); gsub(/["'\'']$/, ""); print; found=0 }
+  ' "${DIVAN_ROOT}/stack.yaml"
+}
+
+# ─── Profile helpers ──────────────────────────────────────────────────────────
+
+# List all profile names
+all_profiles() {
+  for f in "${DIVAN_ROOT}/profiles/"*.yaml; do
+    basename "$f" .yaml
+  done
+}
+
+# Read a field from a profile YAML
+profile_field() {
+  local profile="$1" field="$2"
+  local file="${DIVAN_ROOT}/profiles/${profile}.yaml"
+  [[ -f "$file" ]] || { log_err "Profile not found: $profile"; exit 1; }
+  grep -E "^${field}:" "$file" | head -1 | sed "s/^${field}:\s*//" | tr -d '"' | tr -d "'"
+}
+
+# Read tags list from a profile (handles multi-line YAML lists)
+profile_tags() {
+  local profile="$1"
+  local file="${DIVAN_ROOT}/profiles/${profile}.yaml"
+  # Join continued lines, extract between [ ], split on comma
+  awk '/^tags:/{buf=$0; found=1; next} found && /^\s/{buf=buf $0; next} found{print buf; found=0} END{if(found) print buf}' "$file" \
+    | sed 's/^tags:\s*//; s/\[//g; s/\]//g' \
+    | tr ',' '\n' \
+    | sed 's/^ *//; s/ *$//' \
+    | tr -d '"' | tr -d "'" \
+    | grep -v '^$'
+}
+
+# Read extras list from a profile
+profile_extras() {
+  local profile="$1"
+  local file="${DIVAN_ROOT}/profiles/${profile}.yaml"
+  awk '/^extras:/{found=1; next} found && /^  -/{gsub(/.*- /, ""); print} found && /^[^ ]/{found=0}' "$file" | tr -d '"' | tr -d "'"
+}
+
+# Read claude_md append text from a profile
+profile_claude_md() {
+  local profile="$1"
+  local file="${DIVAN_ROOT}/profiles/${profile}.yaml"
+  awk '/^claude_md:/{found=1; next} found && /append: \|/{reading=1; next} reading && /^    /{gsub(/^    /, ""); print} reading && /^[^ ]/{reading=0}' "$file"
+}
+
+# Resolve all plugins for a profile (tags + extras, deduplicated)
+resolve_plugins() {
+  local profile="$1"
+  local -A seen=()
+  local result=()
+
+  # Always include required plugins
+  while IFS= read -r name; do
+    if plugin_is_required "$name" && [[ -z "${seen[$name]:-}" ]]; then
+      seen[$name]=1
+      result+=("$name")
+    fi
+  done < <(all_plugin_names)
+
+  # Add plugins matching profile tags
+  local tags
+  tags=$(profile_tags "$profile")
+  while IFS= read -r name; do
+    if [[ -z "${seen[$name]:-}" ]]; then
+      for tag in $tags; do
+        if plugin_has_tag "$name" "$tag"; then
+          seen[$name]=1
+          result+=("$name")
+          break
+        fi
+      done
+    fi
+  done < <(all_plugin_names)
+
+  # Add explicit extras
+  while IFS= read -r name; do
+    [[ -z "$name" ]] && continue
+    if [[ -z "${seen[$name]:-}" ]]; then
+      seen[$name]=1
+      result+=("$name")
+    fi
+  done < <(profile_extras "$profile")
+
+  printf '%s\n' "${result[@]}"
+}
+
+# ─── Build settings JSON ─────────────────────────────────────────────────────
+
+build_settings_json() {
+  local -a plugins=("$@")
+  local plugins_json="{"
+  local first=true
+  for p in "${plugins[@]}"; do
+    $first && first=false || plugins_json+=","
+    plugins_json+="\"${p}@${MARKETPLACE}\":true"
+  done
+  plugins_json+="}"
+
+  jq -n --argjson plugins "$plugins_json" '{
+    model: "opus[1m]",
+    enabledPlugins: $plugins,
+    skipDangerousModePermissionPrompt: true
+  }'
+}
+
+# ─── Backup ───────────────────────────────────────────────────────────────────
+
+backup_if_exists() {
+  local file="$1"
+  if [[ -f "$file" ]]; then
+    local backup_dir="${CLAUDE_DIR}/backups/divan-$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$backup_dir"
+    cp "$file" "$backup_dir/$(basename "$file")"
+    log_dim "Backed up $(basename "$file") → $backup_dir/"
+  fi
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Commands
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─── divan init ───────────────────────────────────────────────────────────────
+
+cmd_init() {
+  local profile="" target="$(pwd)" force=false dry_run=false
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -p|--profile) profile="$2"; shift 2 ;;
+      -t|--target)  target="$2"; shift 2 ;;
+      -f|--force)   force=true; shift ;;
+      -n|--dry-run) dry_run=true; shift ;;
+      *) log_err "Unknown flag: $1"; exit 1 ;;
+    esac
+  done
+
+  # Interactive profile picker if not specified
+  if [[ -z "$profile" ]]; then
+    echo ""
+    echo -e "${BOLD}Select a profile for this project:${NC}"
+    echo ""
+
+    local i=1
+    local -a profile_list=()
+    for p in $(all_profiles); do
+      [[ "$p" == "default" ]] && continue
+      local desc icon
+      desc=$(profile_field "$p" "description")
+      icon=$(profile_field "$p" "icon")
+      local count
+      count=$(resolve_plugins "$p" | wc -l)
+      printf "  ${BOLD}%2d)${NC} ${CYAN}[%s]${NC} %-12s  %s ${DIM}(%d plugins)${NC}\n" "$i" "$icon" "$p" "$desc" "$count"
+      profile_list+=("$p")
+      ((i++))
+    done
+
+    echo ""
+    echo -e "  ${DIM} 0) custom       Pick individual plugins interactively${NC}"
+    echo ""
+    read -rp "  Selection [1-$((i-1))]: " choice
+
+    if [[ "$choice" == "0" ]]; then
+      profile="__custom__"
+    elif [[ "$choice" -ge 1 && "$choice" -lt "$i" ]] 2>/dev/null; then
+      profile="${profile_list[$((choice-1))]}"
+    else
+      log_err "Invalid choice"; exit 1
+    fi
+  fi
+
+  # Resolve plugins
+  local -a selected_plugins=()
+  if [[ "$profile" == "__custom__" ]]; then
+    echo ""
+    echo -e "${BOLD}Select plugins (space-separated numbers, or 'all'):${NC}"
+    echo ""
+    local i=1
+    local -a all_names=()
+    while IFS= read -r name; do
+      local req="" desc
+      plugin_is_required "$name" && req=" ${GREEN}(required)${NC}"
+      desc=$(plugin_desc "$name")
+      local tags_str
+      tags_str=$(plugin_tags "$name" | tr ' ' ',')
+      printf "  ${BOLD}%2d)${NC} %-22s ${DIM}[%s]${NC}%b\n" "$i" "$name" "$tags_str" "$req"
+      log_dim "     $desc"
+      all_names+=("$name")
+      ((i++))
+    done < <(all_plugin_names)
+
+    echo ""
+    read -rp "  Selection: " choices
+
+    if [[ "$choices" == "all" ]]; then
+      selected_plugins=("${all_names[@]}")
+    else
+      for c in $choices; do
+        if [[ "$c" -ge 1 && "$c" -lt "$i" ]] 2>/dev/null; then
+          selected_plugins+=("${all_names[$((c-1))]}")
+        fi
+      done
+    fi
+
+    # Always include required
+    while IFS= read -r name; do
+      if plugin_is_required "$name"; then
+        local found=false
+        for p in "${selected_plugins[@]}"; do [[ "$p" == "$name" ]] && found=true; done
+        $found || selected_plugins+=("$name")
+      fi
+    done < <(all_plugin_names)
+    profile="custom"
+  else
+    mapfile -t selected_plugins < <(resolve_plugins "$profile")
+  fi
+
+  # ── Summary ──
+  echo ""
+  echo -e "${BOLD}Project initialization:${NC}"
+  echo -e "  Profile:  ${CYAN}${profile}${NC}"
+  echo -e "  Target:   ${target}"
+  echo -e "  Plugins:  ${#selected_plugins[@]}"
+  echo ""
+  for p in "${selected_plugins[@]}"; do
+    local req=""
+    plugin_is_required "$p" && req=" ${DIM}(core)${NC}"
+    echo -e "    ${GREEN}+${NC} ${p}${req}"
+  done
+  echo ""
+
+  if $dry_run; then
+    log_info "Dry run — no files written."
+    return
+  fi
+
+  read -rp "  Proceed? [Y/n] " confirm
+  [[ "${confirm:-Y}" =~ ^[Yy]?$ ]] || { log_warn "Aborted."; exit 0; }
+
+  # ── Write files ──
+  echo ""
+
+  # 1. .divan.yaml lockfile
+  local lockfile="${target}/.divan.yaml"
+  if [[ -f "$lockfile" ]] && ! $force; then
+    log_warn "Project already initialized (.divan.yaml exists). Use --force to reinitialize."
+    exit 1
+  fi
+
+  {
+    echo "# Divan project config — generated $(date +%Y-%m-%d)"
+    echo "# Do not edit manually. Use 'divan add/remove' to modify."
+    echo "profile: ${profile}"
+    echo "divan_version: 2.0.0"
+    echo "initialized: $(date -Iseconds)"
+    echo "plugins:"
+    for p in "${selected_plugins[@]}"; do
+      echo "  - ${p}"
+    done
+  } > "$lockfile"
+  log_ok "Created .divan.yaml"
+
+  # 2. User-level settings (enable plugins globally)
+  backup_if_exists "$SETTINGS_FILE"
+  mkdir -p "$CLAUDE_DIR"
+  build_settings_json "${selected_plugins[@]}" > "$SETTINGS_FILE"
+  log_ok "Updated ~/.claude/settings.json (${#selected_plugins[@]} plugins)"
+
+  # 3. Project .claude/ directory
+  mkdir -p "${target}/.claude"
+
+  # 4. Project-level settings.json
+  build_settings_json "${selected_plugins[@]}" | jq 'del(.skipDangerousModePermissionPrompt)' > "${target}/.claude/settings.json"
+  log_ok "Created .claude/settings.json (project-level)"
+
+  # 5. CLAUDE.md
+  if [[ ! -f "${target}/CLAUDE.md" ]] || $force; then
+    {
+      echo "# CLAUDE.md"
+      echo ""
+      echo "This project was initialized with [Divan](https://github.com/mahi97/divan) (profile: ${profile})."
+      echo ""
+      if [[ "$profile" != "custom" ]]; then
+        profile_claude_md "$profile"
+      else
+        echo "## Divan Profile: custom"
+        echo "Plugins: $(IFS=', '; echo "${selected_plugins[*]}")"
+      fi
+      echo ""
+      echo "## Available Commands"
+      echo ""
+      echo '```bash'
+      echo "divan status       # Show what's installed"
+      echo "divan add <plugin> # Add a plugin"
+      echo "divan remove <p>   # Remove a plugin"
+      echo "divan sync         # Re-sync from profile"
+      echo "divan list         # Browse the full collection"
+      echo '```'
+    } > "${target}/CLAUDE.md"
+    log_ok "Created CLAUDE.md"
+  else
+    log_warn "CLAUDE.md exists, skipping (use --force to overwrite)"
+  fi
+
+  # 6. Copy custom skills tagged for this profile
+  local skills_copied=0
+  if [[ -d "${DIVAN_ROOT}/skills" ]]; then
+    mkdir -p "${target}/.claude/skills"
+    for skill_file in "${DIVAN_ROOT}/skills/"*.md; do
+      [[ -f "$skill_file" ]] || continue
+      [[ "$(basename "$skill_file")" == "README.md" ]] && continue
+      cp "$skill_file" "${target}/.claude/skills/"
+      ((skills_copied++))
+    done
+    [[ $skills_copied -gt 0 ]] && log_ok "Copied ${skills_copied} custom skills"
+  fi
+
+  # 7. Copy custom hooks
+  local hooks_copied=0
+  if [[ -d "${DIVAN_ROOT}/hooks/scripts" ]]; then
+    mkdir -p "${target}/.claude/hooks"
+    for hook_file in "${DIVAN_ROOT}/hooks/"*.yaml; do
+      [[ -f "$hook_file" ]] || continue
+      cp "$hook_file" "${target}/.claude/hooks/"
+      ((hooks_copied++))
+    done
+    if [[ -d "${DIVAN_ROOT}/hooks/scripts" ]]; then
+      mkdir -p "${target}/.claude/hooks/scripts"
+      for script in "${DIVAN_ROOT}/hooks/scripts/"*; do
+        [[ -f "$script" ]] && [[ "$(basename "$script")" != ".gitkeep" ]] || continue
+        cp "$script" "${target}/.claude/hooks/scripts/"
+        ((hooks_copied++))
+      done
+    fi
+    [[ $hooks_copied -gt 0 ]] && log_ok "Copied ${hooks_copied} custom hooks"
+  fi
+
+  # 8. Copy custom commands
+  local cmds_copied=0
+  if [[ -d "${DIVAN_ROOT}/commands" ]]; then
+    mkdir -p "${target}/.claude/commands"
+    for cmd_file in "${DIVAN_ROOT}/commands/"*.md; do
+      [[ -f "$cmd_file" ]] || continue
+      [[ "$(basename "$cmd_file")" == "README.md" ]] && continue
+      cp "$cmd_file" "${target}/.claude/commands/"
+      ((cmds_copied++))
+    done
+    [[ $cmds_copied -gt 0 ]] && log_ok "Copied ${cmds_copied} custom commands"
+  fi
+
+  # Install via CLI if available
+  if command -v claude &>/dev/null; then
+    echo ""
+    log_info "Installing plugins via Claude Code CLI..."
+    for p in "${selected_plugins[@]}"; do
+      claude plugins install "$p" 2>/dev/null && log_ok "Installed ${p}" || log_warn "Could not install ${p} (will install on next launch)"
+    done
+  fi
+
+  echo ""
+  echo -e "${GREEN}${BOLD}Project initialized!${NC}"
+  echo -e "${DIM}  Profile: ${profile} | Plugins: ${#selected_plugins[@]} | Skills: ${skills_copied} | Hooks: ${hooks_copied}${NC}"
+  echo ""
+}
+
+# ─── divan add ────────────────────────────────────────────────────────────────
+
+cmd_add() {
+  local what="$1"
+  local lockfile=".divan.yaml"
+  [[ -f "$lockfile" ]] || { log_err "Not a divan project. Run 'divan init' first."; exit 1; }
+
+  # Check if it's a tag or a plugin name
+  local -a to_add=()
+  local is_tag=false
+
+  # Check if any plugin has this tag
+  while IFS= read -r name; do
+    if plugin_has_tag "$name" "$what"; then
+      is_tag=true
+      to_add+=("$name")
+    fi
+  done < <(all_plugin_names)
+
+  # If not a tag, treat as plugin name
+  if ! $is_tag; then
+    # Verify plugin exists
+    if all_plugin_names | grep -qx "$what"; then
+      to_add+=("$what")
+    else
+      log_err "Unknown plugin or tag: $what"
+      echo ""
+      echo "Available plugins:"
+      all_plugin_names | sed 's/^/  /'
+      echo ""
+      echo "Available tags:"
+      echo "  core git code-quality workflow frontend backend ai-ml platform"
+      echo "  code-intel devtools communication lsp session safety python cpp"
+      exit 1
+    fi
+  fi
+
+  local added=0
+  for p in "${to_add[@]}"; do
+    if grep -q "  - ${p}$" "$lockfile"; then
+      log_dim "${p} already installed"
+      continue
+    fi
+
+    # Add to lockfile
+    echo "  - ${p}" >> "$lockfile"
+
+    # Add to project settings
+    if [[ -f ".claude/settings.json" ]]; then
+      local tmp
+      tmp=$(jq --arg p "${p}@${MARKETPLACE}" '.enabledPlugins[$p] = true' ".claude/settings.json")
+      echo "$tmp" > ".claude/settings.json"
+    fi
+
+    # Add to user settings
+    if [[ -f "$SETTINGS_FILE" ]]; then
+      local tmp
+      tmp=$(jq --arg p "${p}@${MARKETPLACE}" '.enabledPlugins[$p] = true' "$SETTINGS_FILE")
+      echo "$tmp" > "$SETTINGS_FILE"
+    fi
+
+    log_ok "Added ${p}"
+    ((added++))
+  done
+
+  [[ $added -eq 0 ]] && log_dim "Nothing new to add."
+  [[ $added -gt 0 ]] && log_info "Added ${added} plugin(s). Restart Claude Code to activate."
+}
+
+# ─── divan remove ─────────────────────────────────────────────────────────────
+
+cmd_remove() {
+  local what="$1"
+  local lockfile=".divan.yaml"
+  [[ -f "$lockfile" ]] || { log_err "Not a divan project."; exit 1; }
+
+  if plugin_is_required "$what"; then
+    log_err "${what} is a core plugin and cannot be removed."
+    exit 1
+  fi
+
+  if ! grep -q "  - ${what}$" "$lockfile"; then
+    log_warn "${what} is not installed in this project."
+    exit 0
+  fi
+
+  # Remove from lockfile
+  sed -i "/  - ${what}$/d" "$lockfile"
+
+  # Remove from project settings
+  if [[ -f ".claude/settings.json" ]]; then
+    local tmp
+    tmp=$(jq --arg p "${what}@${MARKETPLACE}" 'del(.enabledPlugins[$p])' ".claude/settings.json")
+    echo "$tmp" > ".claude/settings.json"
+  fi
+
+  log_ok "Removed ${what}"
+  log_info "Restart Claude Code to apply."
+}
+
+# ─── divan list ───────────────────────────────────────────────────────────────
+
+cmd_list() {
+  local filter_profile=""
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -p|--profile) filter_profile="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  echo ""
+  echo -e "${BOLD}Divan Collection — All Available Plugins${NC}"
+  echo ""
+
+  local -a resolved=()
+  if [[ -n "$filter_profile" ]]; then
+    mapfile -t resolved < <(resolve_plugins "$filter_profile")
+    echo -e "${DIM}Showing plugins for profile: ${filter_profile}${NC}"
+    echo ""
+  fi
+
+  local prev_tag=""
+  while IFS= read -r name; do
+    local tags_str desc req_marker="" included_marker=""
+    tags_str=$(plugin_tags "$name" | tr ' ' ', ')
+    desc=$(plugin_desc "$name")
+    plugin_is_required "$name" && req_marker=" ${GREEN}[core]${NC}"
+
+    if [[ -n "$filter_profile" ]]; then
+      local found=false
+      for r in "${resolved[@]}"; do [[ "$r" == "$name" ]] && found=true; done
+      if $found; then
+        included_marker=" ${CYAN}*${NC}"
+      else
+        included_marker=" ${DIM}-${NC}"
+      fi
+    fi
+
+    printf "  ${BOLD}%-22s${NC}%b%b ${DIM}[%s]${NC}\n" "$name" "$req_marker" "$included_marker" "$tags_str"
+    log_dim "  $desc"
+  done < <(all_plugin_names)
+
+  echo ""
+  if [[ -n "$filter_profile" ]]; then
+    echo -e "${DIM}  ${CYAN}*${NC}${DIM} = included in profile    ${DIM}-${NC}${DIM} = not included${NC}"
+  fi
+  local total
+  total=$(all_plugin_names | wc -l)
+  echo -e "${DIM}  ${total} plugins total in collection${NC}"
+  echo ""
+}
+
+# ─── divan profiles ──────────────────────────────────────────────────────────
+
+cmd_profiles() {
+  echo ""
+  echo -e "${BOLD}Available Profiles${NC}"
+  echo ""
+
+  for p in $(all_profiles); do
+    [[ "$p" == "default" ]] && continue
+    local desc icon count
+    desc=$(profile_field "$p" "description")
+    icon=$(profile_field "$p" "icon")
+    count=$(resolve_plugins "$p" | wc -l)
+
+    printf "  ${CYAN}[%s]${NC} ${BOLD}%-12s${NC} %s ${DIM}(%d plugins)${NC}\n" "$icon" "$p" "$desc" "$count"
+
+    # Show plugin list dimmed
+    local plugins_str
+    plugins_str=$(resolve_plugins "$p" | tr '\n' ', ' | sed 's/,$//' | sed 's/,/, /g')
+    log_dim "  ${plugins_str}"
+    echo ""
+  done
+}
+
+# ─── divan status ─────────────────────────────────────────────────────────────
+
+cmd_status() {
+  local lockfile=".divan.yaml"
+  if [[ ! -f "$lockfile" ]]; then
+    log_warn "Not a divan project. Run 'divan init' to initialize."
+    exit 0
+  fi
+
+  local profile
+  profile=$(grep "^profile:" "$lockfile" | sed 's/profile:\s*//')
+  local version
+  version=$(grep "^divan_version:" "$lockfile" | sed 's/divan_version:\s*//')
+  local init_date
+  init_date=$(grep "^initialized:" "$lockfile" | sed 's/initialized:\s*//')
+
+  echo ""
+  echo -e "${BOLD}Divan Project Status${NC}"
+  echo ""
+  echo -e "  Profile:     ${CYAN}${profile}${NC}"
+  echo -e "  Version:     ${version}"
+  echo -e "  Initialized: ${init_date}"
+  echo ""
+
+  echo -e "  ${BOLD}Installed plugins:${NC}"
+  grep "^  - " "$lockfile" | sed 's/  - //' | while read -r name; do
+    local req=""
+    plugin_is_required "$name" && req=" ${DIM}(core)${NC}"
+    echo -e "    ${GREEN}+${NC} ${name}${req}"
+  done
+
+  echo ""
+
+  # Show what's available but not installed
+  local -a installed=()
+  mapfile -t installed < <(grep "^  - " "$lockfile" | sed 's/  - //')
+  local missing=0
+  while IFS= read -r name; do
+    local found=false
+    for inst in "${installed[@]}"; do [[ "$inst" == "$name" ]] && found=true; done
+    if ! $found; then
+      [[ $missing -eq 0 ]] && echo -e "  ${BOLD}Available to add:${NC}"
+      echo -e "    ${DIM}- ${name}${NC}"
+      ((missing++))
+    fi
+  done < <(all_plugin_names)
+
+  [[ $missing -gt 0 ]] && echo -e "\n  ${DIM}Run 'divan add <plugin>' to add more.${NC}"
+  echo ""
+}
+
+# ─── divan sync ───────────────────────────────────────────────────────────────
+
+cmd_sync() {
+  local lockfile=".divan.yaml"
+  [[ -f "$lockfile" ]] || { log_err "Not a divan project."; exit 1; }
+
+  local profile
+  profile=$(grep "^profile:" "$lockfile" | sed 's/profile:\s*//')
+
+  if [[ "$profile" == "custom" ]]; then
+    # For custom, just rebuild settings from lockfile
+    local -a plugins=()
+    mapfile -t plugins < <(grep "^  - " "$lockfile" | sed 's/  - //')
+
+    build_settings_json "${plugins[@]}" | jq 'del(.skipDangerousModePermissionPrompt)' > ".claude/settings.json"
+    backup_if_exists "$SETTINGS_FILE"
+    build_settings_json "${plugins[@]}" > "$SETTINGS_FILE"
+    log_ok "Synced ${#plugins[@]} plugins from .divan.yaml"
+  else
+    # For profiles, re-resolve and update
+    local -a resolved=()
+    mapfile -t resolved < <(resolve_plugins "$profile")
+
+    # Rebuild lockfile
+    local init_date
+    init_date=$(grep "^initialized:" "$lockfile" | sed 's/initialized:\s*//')
+    {
+      echo "# Divan project config — synced $(date +%Y-%m-%d)"
+      echo "# Do not edit manually. Use 'divan add/remove' to modify."
+      echo "profile: ${profile}"
+      echo "divan_version: 2.0.0"
+      echo "initialized: ${init_date}"
+      echo "plugins:"
+      for p in "${resolved[@]}"; do
+        echo "  - ${p}"
+      done
+    } > "$lockfile"
+
+    build_settings_json "${resolved[@]}" | jq 'del(.skipDangerousModePermissionPrompt)' > ".claude/settings.json"
+    backup_if_exists "$SETTINGS_FILE"
+    build_settings_json "${resolved[@]}" > "$SETTINGS_FILE"
+    log_ok "Synced profile '${profile}' — ${#resolved[@]} plugins"
+  fi
+
+  log_info "Restart Claude Code to apply."
+}
+
+# ─── divan user-install ──────────────────────────────────────────────────────
+
+cmd_user_install() {
+  local profile="full"
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -p|--profile) profile="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  local -a plugins=()
+  mapfile -t plugins < <(resolve_plugins "$profile")
+
+  echo ""
+  log_info "User-level install with profile '${profile}' (${#plugins[@]} plugins)"
+  echo ""
+
+  backup_if_exists "$SETTINGS_FILE"
+  mkdir -p "$CLAUDE_DIR"
+  build_settings_json "${plugins[@]}" > "$SETTINGS_FILE"
+  log_ok "Updated ~/.claude/settings.json"
+
+  if command -v claude &>/dev/null; then
+    log_info "Installing plugins via CLI..."
+    for p in "${plugins[@]}"; do
+      claude plugins install "$p" 2>/dev/null && log_ok "${p}" || log_warn "${p} (deferred)"
+    done
+  else
+    log_warn "Claude CLI not found — plugins will install on next launch."
+  fi
+
+  echo ""
+  echo -e "${GREEN}${BOLD}Done!${NC} ${#plugins[@]} plugins enabled."
+  echo ""
+}
+
+# ─── divan uninstall ──────────────────────────────────────────────────────────
+
+cmd_uninstall() {
+  backup_if_exists "$SETTINGS_FILE"
+  jq -n '{model: "opus[1m]", enabledPlugins: {}}' > "$SETTINGS_FILE"
+  log_ok "Settings reset. Plugins disabled but cached."
+  log_dim "Run 'divan user-install' to restore."
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Banner & Routing
+# ═══════════════════════════════════════════════════════════════════════════════
+
+banner() {
+  echo -e "${BOLD}${CYAN}"
+  echo "  ╺━┓╻╻ ╻┏━┓┏┓╻"
+  echo "  ┏━╸┃┃┗┛┃┣━┫┃┗┫   Claude Code Super Collection"
+  echo "  ╺━╸╹╹  ╹╹ ╹╹ ╹   v2.0.0"
+  echo -e "${NC}"
+}
+
+usage() {
+  banner
+  echo "Usage: divan <command> [options]"
+  echo ""
+  echo "Commands:"
+  echo "  init              Initialize a project with a profile"
+  echo "  add <plugin|tag>  Add plugins to current project"
+  echo "  remove <plugin>   Remove a plugin from current project"
+  echo "  list              Browse all available plugins"
+  echo "  profiles          List available profiles"
+  echo "  status            Show current project's config"
+  echo "  sync              Re-sync project from its profile"
+  echo "  user-install      Install at user level (~/.claude/)"
+  echo "  uninstall         Reset user-level settings"
+  echo ""
+  echo "Examples:"
+  echo "  divan init --profile web"
+  echo "  divan init --profile ml --target ~/my-research"
+  echo "  divan add frontend-design"
+  echo "  divan add ai-ml              # add all plugins tagged 'ai-ml'"
+  echo "  divan list --profile web"
+  echo ""
+}
+
+# ─── Main ─────────────────────────────────────────────────────────────────────
+
+[[ $# -eq 0 ]] && { usage; exit 0; }
+
+CMD="$1"; shift
+
+case "$CMD" in
+  init)          cmd_init "$@" ;;
+  add)           [[ $# -ge 1 ]] || { log_err "Usage: divan add <plugin|tag>"; exit 1; }; cmd_add "$@" ;;
+  remove|rm)     [[ $# -ge 1 ]] || { log_err "Usage: divan remove <plugin>"; exit 1; }; cmd_remove "$@" ;;
+  list|ls)       cmd_list "$@" ;;
+  profiles)      cmd_profiles ;;
+  status|st)     cmd_status ;;
+  sync)          cmd_sync ;;
+  user-install)  cmd_user_install "$@" ;;
+  uninstall)     cmd_uninstall ;;
+  help|-h|--help) usage ;;
+  *)             log_err "Unknown command: $CMD"; usage; exit 1 ;;
+esac

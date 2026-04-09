@@ -1,17 +1,32 @@
-# Web Profile - Web development focused
+# Web Profile - Full-stack web development
 name: web
-description: "For web applications and frontend projects"
-extends: minimal
-plugins:
-  - superpowers
-  - commit-commands
-  - context7
-  - github
-  - ralph-loop
+description: "Next.js, React, Vercel, Supabase, frontend design, and deployment."
+icon: "WB"
+
+tags: [core, git, code-quality, workflow, frontend, backend, platform]
+
+# Explicitly include these even if tags don't cover them
+extras:
   - vercel
-  - frontend-design
   - supabase
+  - frontend-design
   - code-review
   - code-simplifier
   - hookify
-  - remember
+  - feature-dev
+
+settings:
+  model: "opus[1m]"
+
+claude_md:
+  append: |
+    ## Divan Profile: web
+    Optimized for full-stack web development.
+    Includes: Vercel (deploy, AI SDK, functions), Supabase (DB, auth), frontend-design,
+    code review, and quality tools.
+
+    ### Quick Commands
+    - `/vercel:deploy` - Deploy to Vercel
+    - `/vercel:env` - Manage environment variables
+    - `/frontend-design` - Generate production UI components
+    - `/commit-push-pr` - Ship changes
